@@ -13,13 +13,22 @@ class Strings {
       'Um pequeno passo. Um começo possível.',
       'One small step. A place to begin.',
     ],
-    'todayTitle': ['O próximo passo começa aqui', 'Your next step starts here'],
+    'todayTitle': ['Seu próximo passo', 'Your next step'],
     'todayIntro': [
       'Escolha seu tempo. Encontre uma ação concreta.',
       'Choose your time. Find one concrete action.',
     ],
     'available': ['Tempo disponível (minutos)', 'Available time (minutes)'],
     'apply': ['Aplicar', 'Apply'],
+    'moreOptions': ['Mais opções', 'More options'],
+    'availablePrompt': ['Quanto tempo você tem?', 'How much time do you have?'],
+    'customTime': ['Outro tempo', 'Custom time'],
+    'chooseAnotherTask': ['Escolher outra tarefa', 'Choose another task'],
+    'retryNote': ['Tentar salvar novamente', 'Try saving again'],
+    'refreshError': [
+      'Não foi possível atualizar a tela. Tente novamente para continuar.',
+      'This screen could not refresh. Try again to continue.',
+    ],
     'nextAction': ['Sua próxima ação', 'Your next action'],
     'start': ['Iniciar sessão', 'Start session'],
     'resumeTitle': ['Seu contexto está salvo', 'Your context is saved'],
@@ -36,6 +45,12 @@ class Strings {
       'Break what you want to learn into small tasks in Plan.',
     ],
     'openPlan': ['Criar meu plano', 'Create my plan'],
+    'viewPlan': ['Abrir meu plano', 'Open my plan'],
+    'firstTask': ['Adicione sua primeira tarefa', 'Add your first task'],
+    'firstTaskBody': [
+      'Seu objetivo já está no Plano. Adicione uma pequena ação para começar.',
+      'Your goal is already in Plan. Add a small action to get started.',
+    ],
     'noFit': ['Nenhuma tarefa cabe neste tempo', 'No task fits this time'],
     'noFitBody': [
       'Aumente o tempo disponível ou crie uma tarefa menor no Plano.',
@@ -46,7 +61,7 @@ class Strings {
       'Seu histórico está em Progresso. Adicione uma nova tarefa quando quiser.',
       'Your history is in Progress. Add a new task when you are ready.',
     ],
-    'planTitle': ['Transforme objetivos em ações', 'Turn goals into actions'],
+    'planTitle': ['Seu plano de estudo', 'Your study plan'],
     'planIntro': [
       'Uma tarefa clara facilita começar. A ordem define a prioridade.',
       'A clear task makes starting easier. Order sets the priority.',
@@ -109,7 +124,7 @@ class Strings {
     ],
     'savingNote': ['Salvando nota…', 'Saving note…'],
     'savedNote': ['Nota salva neste dispositivo', 'Note saved on this device'],
-    'saveNote': ['Salvar nota', 'Save note'],
+    'saveNote': ['Tentar salvar novamente', 'Retry saving note'],
     'noteError': [
       'Não foi possível salvar. Tente novamente antes de sair.',
       'Could not save. Try again before leaving.',
@@ -120,7 +135,7 @@ class Strings {
       'A sessão e a tarefa serão concluídas. O tempo e sua nota ficarão no histórico.',
       'The session and task will be completed. Your time and note will be kept in history.',
     ],
-    'progressTitle': ['Cada passo fica registrado', 'Every step is recorded'],
+    'progressTitle': ['Seu progresso', 'Your progress'],
     'progressIntro': [
       'Tempo e conclusões das suas sessões, salvos somente neste dispositivo.',
       'Time and completions from your sessions, saved only on this device.',

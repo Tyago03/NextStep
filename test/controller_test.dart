@@ -40,10 +40,17 @@ class _ControlledRepository implements NextStepRepository {
   final writtenNotes = <String>[];
   Completer<void>? saveGate;
   bool failNextSave = false;
+  bool failNextLoad = false;
   int pauses = 0;
 
   @override
-  Future<AppSnapshot> load() async => snapshot;
+  Future<AppSnapshot> load() async {
+    if (failNextLoad) {
+      failNextLoad = false;
+      throw StateError('Injected refresh failure after a successful write');
+    }
+    return snapshot;
+  }
 
   @override
   Future<void> saveNote(int sessionId, String note) async {
@@ -221,6 +228,91 @@ void main() {
       repository.saveGate!.complete();
       await _drainMicrotasks();
       expect(repository.writtenNotes, ['First edit', 'Saved before teardown']);
+    },
+  );
+
+  test(
+    'a committed mutation is successful even when its snapshot refresh fails',
+    () async {
+      final committed = await controller.run((store) async {
+        await store.pauseSession(1, 'Saved at interruption');
+        repository.failNextLoad = true;
+      });
+      expect(repository.snapshot.activeSession!.status, SessionStatus.paused);
+      expect(repository.snapshot.activeSession!.note, 'Saved at interruption');
+      expect(
+        committed,
+        isTrue,
+        reason:
+            'A saved create dialog must close instead of inviting a '
+            'duplicate insertion when its refresh alone fails.',
+      );
+      expect(container.read(appControllerProvider).errorCode, 'refreshError');
+      expect(container.read(appControllerProvider).busy, isFalse);
+      expect(container.read(appControllerProvider).needsRefresh, isTrue);
+      expect(
+        await controller.run((store) => store.pauseSession(1, 'Duplicate')),
+        isFalse,
+      );
+      expect(repository.pauses, 1);
+
+      await controller.reload();
+      expect(container.read(appControllerProvider).errorCode, isNull);
+      expect(container.read(appControllerProvider).needsRefresh, isFalse);
+      expect(
+        container.read(appControllerProvider).snapshot!.activeSession!.status,
+        SessionStatus.paused,
+      );
+      expect(repository.pauses, 1);
+    },
+  );
+
+  test(
+    'autosave refresh failure keeps new drafts until a refreshed retry',
+    () async {
+      repository.failNextLoad = true;
+      controller.saveNote(1, 'Persisted note');
+      await _drainMicrotasks();
+      var state = container.read(appControllerProvider);
+      expect(repository.snapshot.activeSession!.note, 'Persisted note');
+      expect(state.needsRefresh, isTrue);
+      expect(state.errorCode, 'refreshError');
+      expect(state.savingNote, isFalse);
+
+      controller.saveNote(1, 'New local draft');
+      await _drainMicrotasks();
+      state = container.read(appControllerProvider);
+      expect(state.needsRefresh, isTrue);
+      expect(state.errorCode, 'refreshError');
+      expect(repository.writtenNotes, ['Persisted note']);
+      expect(
+        controller.noteForSession(state.snapshot!.activeSession!),
+        'New local draft',
+      );
+      expect(
+        await controller.run((store) => store.pauseSession(1, 'Blocked')),
+        isFalse,
+      );
+
+      await controller.reload();
+      state = container.read(appControllerProvider);
+      expect(state.needsRefresh, isFalse);
+      expect(state.snapshot!.activeSession!.note, 'Persisted note');
+      expect(
+        controller.noteForSession(state.snapshot!.activeSession!),
+        'New local draft',
+      );
+      expect(controller.hasUnsavedNote(state.snapshot!.activeSession!), isTrue);
+      expect(
+        await controller.run((store) => store.saveNote(1, 'New local draft')),
+        isTrue,
+      );
+      state = container.read(appControllerProvider);
+      expect(
+        controller.hasUnsavedNote(state.snapshot!.activeSession!),
+        isFalse,
+      );
+      expect(repository.writtenNotes, ['Persisted note', 'New local draft']);
     },
   );
 }

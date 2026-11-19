@@ -443,4 +443,147 @@ void main() {
       expect(completed.completedAt, completed.startedAt);
     },
   );
+
+  test(
+    'editing a plan changes suggestions without reopening completed tasks',
+    () async {
+      final firstGoal = await addGoal(title: 'First goal', position: 0);
+      final laterGoal = await addGoal(title: 'Later goal', position: 5);
+      final originalTask = await addTask(
+        goalId: firstGoal,
+        title: 'Original task',
+        minutes: 10,
+        url: 'https://example.com/old',
+      );
+      final laterTask = await addTask(
+        goalId: laterGoal,
+        title: 'Later task',
+        minutes: 15,
+      );
+      await repository.savePreferences(availableMinutes: 15);
+      expect((await repository.load()).suggestion!.id, originalTask);
+
+      await repository.saveGoal(
+        id: laterGoal,
+        title: 'Priority goal',
+        position: 0,
+      );
+      await repository.saveGoal(
+        id: firstGoal,
+        title: 'Former priority',
+        position: 9,
+      );
+      expect((await repository.load()).suggestion!.id, laterTask);
+      await repository.saveTask(
+        id: laterTask,
+        goalId: laterGoal,
+        title: 'Task now needs more time',
+        minutes: 30,
+        position: 0,
+      );
+      expect((await repository.load()).suggestion!.id, originalTask);
+      await repository.startSession(originalTask);
+      await repository.completeSession(
+        (await repository.load()).activeSession!.id,
+        'Completed before the plan edit',
+      );
+      await repository.saveTask(
+        id: originalTask,
+        goalId: firstGoal,
+        title: 'Edited completed task',
+        minutes: 5,
+        position: 4,
+        url: '  ',
+      );
+      await repository.close();
+      await openRepository();
+      final snapshot = await repository.load();
+      final edited = snapshot.tasks.singleWhere(
+        (task) => task.id == originalTask,
+      );
+      expect(edited.completed, isTrue);
+      expect(edited.title, 'Edited completed task');
+      expect(edited.url, isNull);
+      expect(edited.position, 4);
+      expect(snapshot.suggestion, isNull);
+      expect(snapshot.sessions.single.taskTitle, 'Original task');
+    },
+  );
+
+  test(
+    'deleting an inactive sibling preserves active time and completed history',
+    () async {
+      final goalId = await addGoal();
+      final completedTask = await addTask(
+        goalId: goalId,
+        title: 'Completed task',
+      );
+      final activeTask = await addTask(goalId: goalId, title: 'Active task');
+      final unusedTask = await addTask(goalId: goalId, title: 'Unused task');
+      await repository.startSession(completedTask);
+      final historyId = (await repository.load()).activeSession!.id;
+      now = now.add(const Duration(seconds: 25));
+      await repository.completeSession(historyId, 'Keep completed context');
+      await repository.startSession(activeTask);
+      final activeId = (await repository.load()).activeSession!.id;
+      now = now.add(const Duration(seconds: 40));
+
+      await repository.deleteTask(completedTask);
+      await repository.deleteTask(unusedTask);
+      await repository.close();
+      now = now.add(const Duration(seconds: 20));
+      await openRepository();
+      final snapshot = await repository.load();
+      expect(snapshot.goals.single.id, goalId);
+      expect(snapshot.tasks.single.id, activeTask);
+      expect(snapshot.activeSession!.id, activeId);
+      expect(
+        snapshot.activeSession!.elapsedAt(now),
+        const Duration(minutes: 1),
+      );
+      final history = snapshot.sessions.singleWhere(
+        (session) => session.id == historyId,
+      );
+      expect(history.taskId, isNull);
+      expect(history.taskTitle, 'Completed task');
+      expect(history.note, 'Keep completed context');
+      expect(history.elapsedMs, 25000);
+    },
+  );
+
+  test(
+    'failed task completion rolls back the session before a safe retry',
+    () async {
+      final taskId = await addTask();
+      await repository.startSession(taskId);
+      final sessionId = (await repository.load()).activeSession!.id;
+      now = now.add(const Duration(seconds: 12));
+      // Inject a storage-level failure in the second half of the transaction.
+      final database = await databaseFactoryFfi.openDatabase(databasePath);
+      await database.execute('''
+      CREATE TRIGGER fail_completion BEFORE UPDATE OF completed ON tasks
+      WHEN NEW.completed = 1
+      BEGIN SELECT RAISE(ABORT, 'Injected completion failure'); END
+    ''');
+      await expectLater(
+        repository.completeSession(sessionId, 'Done'),
+        throwsA(isA<Exception>()),
+      );
+      var snapshot = await repository.load();
+      expect(snapshot.activeSession!.id, sessionId);
+      expect(snapshot.activeSession!.status, SessionStatus.running);
+      expect(snapshot.activeSession!.elapsedMs, 0);
+      expect(snapshot.activeSession!.note, isEmpty);
+      expect(snapshot.tasks.single.completed, isFalse);
+
+      await database.execute('DROP TRIGGER fail_completion');
+      now = now.add(const Duration(seconds: 3));
+      await repository.completeSession(sessionId, 'Retried successfully');
+      snapshot = await repository.load();
+      expect(snapshot.activeSession, isNull);
+      expect(snapshot.sessions.single.elapsedMs, 15000);
+      expect(snapshot.sessions.single.note, 'Retried successfully');
+      expect(snapshot.tasks.single.completed, isTrue);
+    },
+  );
 }

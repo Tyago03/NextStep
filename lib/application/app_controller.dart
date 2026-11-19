@@ -20,19 +20,24 @@ class AppViewState {
     this.snapshot,
     this.busy = false,
     this.savingNote = false,
+    this.needsRefresh = false,
     this.errorCode,
   });
 
   final AppSnapshot? snapshot;
   final bool busy;
   final bool savingNote;
+  final bool needsRefresh;
   final String? errorCode;
 }
 
 class AppController extends Notifier<AppViewState> {
   Future<void> _noteWrites = Future<void>.value();
   int _noteRevision = 0;
+  int _pendingNoteWrites = 0;
   bool _disposed = false;
+  bool _reloading = false;
+  bool _mutating = false;
   final Map<int, String> _noteDrafts = {};
 
   /// A draft remains available during navigation, even if a write is pending
@@ -64,25 +69,39 @@ class AppController extends Notifier<AppViewState> {
       error is DomainException ? error.code : 'storageError';
 
   Future<void> reload() async {
-    if (_disposed) return;
-    state = AppViewState(snapshot: state.snapshot, busy: true);
+    if (_disposed || _reloading || _mutating) return;
+    _reloading = true;
+    final storage = repository;
+    state = AppViewState(
+      snapshot: state.snapshot,
+      busy: true,
+      savingNote: state.savingNote,
+      needsRefresh: state.needsRefresh,
+      errorCode: state.errorCode,
+    );
     try {
-      final snapshot = await repository.load();
+      await _noteWrites;
+      final snapshot = await storage.load();
       _acknowledgeDrafts(snapshot);
       if (!_disposed) state = AppViewState(snapshot: snapshot);
     } catch (error) {
       if (!_disposed) {
         state = AppViewState(
           snapshot: state.snapshot,
-          errorCode: _error(error),
+          needsRefresh: state.snapshot != null,
+          errorCode: state.snapshot != null ? 'refreshError' : _error(error),
         );
       }
+    } finally {
+      _reloading = false;
     }
   }
 
   Future<bool> run(Future<void> Function(NextStepRepository) action) async {
-    if (_disposed || state.busy) return false;
+    if (_disposed || state.busy || state.needsRefresh) return false;
     final storage = repository;
+    _mutating = true;
+    var committed = false;
     state = AppViewState(
       snapshot: state.snapshot,
       busy: true,
@@ -90,7 +109,18 @@ class AppController extends Notifier<AppViewState> {
     );
     try {
       await _noteWrites;
+      // An autosave may have failed to refresh while this action waited.
+      // Require a fresh snapshot before executing a new mutation.
+      if (!_disposed && state.needsRefresh) {
+        state = AppViewState(
+          snapshot: state.snapshot,
+          needsRefresh: true,
+          errorCode: state.errorCode,
+        );
+        return false;
+      }
       await action(storage);
+      committed = true;
       final snapshot = await storage.load();
       _acknowledgeDrafts(snapshot);
       if (!_disposed) state = AppViewState(snapshot: snapshot);
@@ -99,10 +129,17 @@ class AppController extends Notifier<AppViewState> {
       if (!_disposed) {
         state = AppViewState(
           snapshot: state.snapshot,
-          errorCode: _error(error),
+          needsRefresh: committed || state.needsRefresh,
+          errorCode: committed || state.needsRefresh
+              ? 'refreshError'
+              : _error(error),
         );
       }
-      return false;
+      // Returning failure after the write committed invites a duplicate insert
+      // when a create dialog is retried. Only the refresh needs to be retried.
+      return committed;
+    } finally {
+      _mutating = false;
     }
   }
 
@@ -113,23 +150,55 @@ class AppController extends Notifier<AppViewState> {
     final storage = repository;
     _noteDrafts[sessionId] = note;
     final revision = ++_noteRevision;
+    if (state.needsRefresh) {
+      state = AppViewState(
+        snapshot: state.snapshot,
+        savingNote: state.savingNote,
+        needsRefresh: true,
+        errorCode: state.errorCode,
+      );
+      return;
+    }
+    _pendingNoteWrites++;
     state = AppViewState(snapshot: state.snapshot, savingNote: true);
     _noteWrites = _noteWrites.then((_) async {
+      var committed = false;
       try {
         await storage.saveNote(sessionId, note);
+        committed = true;
         if (_disposed || revision != _noteRevision) return;
         final snapshot = await storage.load();
         if (!_disposed && revision == _noteRevision) {
-          _noteDrafts.remove(sessionId);
-          state = AppViewState(snapshot: snapshot, busy: state.busy);
+          _acknowledgeDrafts(snapshot);
+          state = AppViewState(
+            snapshot: state.needsRefresh ? state.snapshot : snapshot,
+            busy: state.busy,
+            savingNote: true,
+            needsRefresh: state.needsRefresh,
+            errorCode: state.needsRefresh ? state.errorCode : null,
+          );
         }
       } catch (error) {
         if (!_disposed) {
           state = AppViewState(
             snapshot: state.snapshot,
             busy: state.busy,
-            savingNote: revision != _noteRevision,
-            errorCode: _error(error),
+            savingNote: true,
+            needsRefresh: committed || state.needsRefresh,
+            errorCode: committed || state.needsRefresh
+                ? 'refreshError'
+                : _error(error),
+          );
+        }
+      } finally {
+        _pendingNoteWrites--;
+        if (!_disposed && state.savingNote != (_pendingNoteWrites > 0)) {
+          state = AppViewState(
+            snapshot: state.snapshot,
+            busy: state.busy,
+            savingNote: _pendingNoteWrites > 0,
+            needsRefresh: state.needsRefresh,
+            errorCode: state.errorCode,
           );
         }
       }

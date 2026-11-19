@@ -32,6 +32,9 @@ class _Application extends ConsumerWidget {
       seedColor: const Color(0xFF146D62),
       brightness: Brightness.light,
       surface: const Color(0xFFF8F7F2),
+      primary: const Color(0xFF146D62),
+      primaryContainer: const Color(0xFFDDEFE8),
+      onPrimaryContainer: const Color(0xFF123D36),
     );
     return MaterialApp(
       title: 'NextStep',
@@ -104,6 +107,7 @@ class _ShellState extends ConsumerState<_Shell> {
     final s = Strings(view.snapshot?.languageCode ?? 'pt');
     ref.listen(appControllerProvider, (previous, next) {
       if (next.errorCode != null &&
+          !next.needsRefresh &&
           previous?.errorCode != next.errorCode &&
           next.snapshot != null) {
         ScaffoldMessenger.of(context)
@@ -120,7 +124,7 @@ class _ShellState extends ConsumerState<_Shell> {
           IconButton(
             key: const ValueKey('language_toggle'),
             tooltip: s('language'),
-            onPressed: view.busy || view.snapshot == null
+            onPressed: view.busy || view.needsRefresh || view.snapshot == null
                 ? null
                 : () => ref
                       .read(appControllerProvider.notifier)
@@ -140,17 +144,49 @@ class _ShellState extends ConsumerState<_Shell> {
             : Column(
                 children: [
                   if (view.busy) const LinearProgressIndicator(minHeight: 2),
+                  if (view.needsRefresh)
+                    Container(
+                      key: const ValueKey('refresh_warning'),
+                      width: double.infinity,
+                      color: Theme.of(context).colorScheme.errorContainer,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 8,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(s('refreshError')),
+                          TextButton.icon(
+                            key: const ValueKey('retry_refresh'),
+                            onPressed: view.busy
+                                ? null
+                                : ref
+                                      .read(appControllerProvider.notifier)
+                                      .reload,
+                            icon: const Icon(Icons.refresh_rounded),
+                            label: Text(s('retry')),
+                          ),
+                        ],
+                      ),
+                    ),
                   Expanded(
-                    child: Align(
-                      alignment: Alignment.topCenter,
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 860),
-                        child: switch (_selected) {
-                          0 => TodayScreen(onNavigate: _navigate),
-                          1 => PlanScreen(onNavigate: _navigate),
-                          2 => SessionScreen(onNavigate: _navigate),
-                          _ => const ProgressScreen(),
-                        },
+                    child: ExcludeFocus(
+                      excluding: view.needsRefresh,
+                      child: AbsorbPointer(
+                        absorbing: view.needsRefresh,
+                        child: Align(
+                          alignment: Alignment.topCenter,
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 860),
+                            child: switch (_selected) {
+                              0 => TodayScreen(onNavigate: _navigate),
+                              1 => PlanScreen(onNavigate: _navigate),
+                              2 => SessionScreen(onNavigate: _navigate),
+                              _ => const ProgressScreen(),
+                            },
+                          ),
+                        ),
                       ),
                     ),
                   ),
