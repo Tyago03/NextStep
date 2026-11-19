@@ -1,0 +1,17 @@
+$ErrorActionPreference = 'Stop'
+$NextStepRoot = Split-Path $PSScriptRoot -Parent
+$NextStepTools = Join-Path (Split-Path $NextStepRoot -Parent) '.nextstep-tools'
+$env:PUB_CACHE = Join-Path $NextStepTools 'pub-cache'
+$env:GRADLE_USER_HOME = Join-Path $NextStepTools 'gradle'
+$env:ANDROID_HOME = Join-Path $NextStepTools 'android-sdk'
+$env:ANDROID_SDK_ROOT = $env:ANDROID_HOME
+$env:ANDROID_USER_HOME = Join-Path $NextStepTools 'android-user'
+$env:ANDROID_EMULATOR_HOME = Join-Path $NextStepTools 'android-user'
+$env:ANDROID_AVD_HOME = Join-Path $NextStepTools 'avd'
+$env:FLUTTER_SUPPRESS_ANALYTICS = 'true'
+$env:DART_SUPPRESS_ANALYTICS = 'true'
+$env:CI = 'true'
+$jdk = Get-ChildItem -LiteralPath (Join-Path $NextStepTools 'jdk') -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($jdk) { $env:JAVA_HOME = $jdk.FullName }
+$env:PATH = (Join-Path $NextStepTools 'flutter\bin') + ';' + (Join-Path $env:ANDROID_HOME 'platform-tools') + ';' + (Join-Path $env:ANDROID_HOME 'emulator') + ';' + $env:PATH
+if ($jdk) { $env:PATH = (Join-Path $env:JAVA_HOME 'bin') + ';' + $env:PATH }
