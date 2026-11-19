@@ -63,6 +63,10 @@ String? validateNumber(String? value, Strings s, {required bool isOrder}) {
       : null;
 }
 
+int _appendPosition(Iterable<int> positions) => positions.isEmpty
+    ? 0
+    : (positions.reduce((a, b) => a > b ? a : b) + 1).clamp(0, 999);
+
 class _GoalDialog extends ConsumerStatefulWidget {
   const _GoalDialog({this.goal});
   final Goal? goal;
@@ -74,10 +78,26 @@ class _GoalDialog extends ConsumerStatefulWidget {
 class _GoalDialogState extends ConsumerState<_GoalDialog> {
   final _form = GlobalKey<FormState>();
   late final _title = TextEditingController(text: widget.goal?.title ?? '');
-  late final _position = TextEditingController(
-    text: (widget.goal?.position ?? 0).toString(),
-  );
+  late final TextEditingController _position;
   String? _error;
+  bool _moreOptions = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _position = TextEditingController(
+      text:
+          (widget.goal?.position ??
+                  _appendPosition(
+                    ref
+                        .read(appControllerProvider)
+                        .snapshot!
+                        .goals
+                        .map((goal) => goal.position),
+                  ))
+              .toString(),
+    );
+  }
 
   @override
   void dispose() {
@@ -114,16 +134,34 @@ class _GoalDialogState extends ConsumerState<_GoalDialog> {
                   validator: (value) => validateTitle(value, s),
                 ),
                 const SizedBox(height: 16),
-                TextFormField(
-                  key: const ValueKey('goal_position'),
-                  controller: _position,
-                  enabled: !view.busy,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: InputDecoration(labelText: s('position')),
-                  validator: (value) => validateNumber(value, s, isOrder: true),
-                ),
-                if (_error != null) ...[
+                if (!_moreOptions)
+                  TextButton.icon(
+                    key: const ValueKey('more_goal_options'),
+                    onPressed: () => setState(() => _moreOptions = true),
+                    icon: const Icon(Icons.tune_rounded),
+                    label: Text(s('moreOptions')),
+                  ),
+                if (_moreOptions)
+                  TextFormField(
+                    key: const ValueKey('goal_position'),
+                    controller: _position,
+                    enabled: !view.busy,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: InputDecoration(labelText: s('position')),
+                    validator: (value) =>
+                        validateNumber(value, s, isOrder: true),
+                  ),
+                if (view.needsRefresh) ...[
+                  Text(s('refreshError')),
+                  TextButton(
+                    key: const ValueKey('dialog_retry_refresh'),
+                    onPressed: view.busy
+                        ? null
+                        : ref.read(appControllerProvider.notifier).reload,
+                    child: Text(s('retry')),
+                  ),
+                ] else if (_error != null && _error != 'refreshError') ...[
                   const SizedBox(height: 16),
                   Text(
                     s(_error!),
@@ -144,7 +182,7 @@ class _GoalDialogState extends ConsumerState<_GoalDialog> {
         ),
         FilledButton(
           key: const ValueKey('save_goal'),
-          onPressed: view.busy
+          onPressed: view.busy || view.needsRefresh
               ? null
               : () async {
                   if (!_form.currentState!.validate()) return;
@@ -188,11 +226,28 @@ class _TaskDialogState extends ConsumerState<_TaskDialog> {
   late final _minutes = TextEditingController(
     text: (widget.task?.minutes ?? 15).toString(),
   );
-  late final _position = TextEditingController(
-    text: (widget.task?.position ?? 0).toString(),
-  );
+  late final TextEditingController _position;
   late final _url = TextEditingController(text: widget.task?.url ?? '');
   String? _error;
+  bool _moreOptions = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _position = TextEditingController(
+      text:
+          (widget.task?.position ??
+                  _appendPosition(
+                    ref
+                        .read(appControllerProvider)
+                        .snapshot!
+                        .tasks
+                        .where((task) => task.goalId == widget.goalId)
+                        .map((task) => task.position),
+                  ))
+              .toString(),
+    );
+  }
 
   @override
   void dispose() {
@@ -244,38 +299,57 @@ class _TaskDialogState extends ConsumerState<_TaskDialog> {
                       validateNumber(value, s, isOrder: false),
                 ),
                 const SizedBox(height: 16),
-                TextFormField(
-                  key: const ValueKey('task_position'),
-                  controller: _position,
-                  enabled: !view.busy,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: InputDecoration(labelText: s('position')),
-                  validator: (value) => validateNumber(value, s, isOrder: true),
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  key: const ValueKey('task_url'),
-                  controller: _url,
-                  enabled: !view.busy,
-                  keyboardType: TextInputType.url,
-                  maxLength: 2048,
-                  decoration: InputDecoration(
-                    labelText: s('url'),
-                    hintText: 'https://',
+                if (!_moreOptions)
+                  TextButton.icon(
+                    key: const ValueKey('more_task_options'),
+                    onPressed: () => setState(() => _moreOptions = true),
+                    icon: const Icon(Icons.tune_rounded),
+                    label: Text(s('moreOptions')),
                   ),
-                  validator: (value) {
-                    final text = value?.trim() ?? '';
-                    if (text.isEmpty) return null;
-                    final uri = Uri.tryParse(text);
-                    return uri == null ||
-                            !['http', 'https'].contains(uri.scheme) ||
-                            uri.host.isEmpty
-                        ? s('invalidUrl')
-                        : null;
-                  },
-                ),
-                if (_error != null) ...[
+                if (_moreOptions) ...[
+                  TextFormField(
+                    key: const ValueKey('task_position'),
+                    controller: _position,
+                    enabled: !view.busy,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: InputDecoration(labelText: s('position')),
+                    validator: (value) =>
+                        validateNumber(value, s, isOrder: true),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    key: const ValueKey('task_url'),
+                    controller: _url,
+                    enabled: !view.busy,
+                    keyboardType: TextInputType.url,
+                    maxLength: 2048,
+                    decoration: InputDecoration(
+                      labelText: s('url'),
+                      hintText: 'https://',
+                    ),
+                    validator: (value) {
+                      final text = value?.trim() ?? '';
+                      if (text.isEmpty) return null;
+                      final uri = Uri.tryParse(text);
+                      return uri == null ||
+                              !['http', 'https'].contains(uri.scheme) ||
+                              uri.host.isEmpty
+                          ? s('invalidUrl')
+                          : null;
+                    },
+                  ),
+                ],
+                if (view.needsRefresh) ...[
+                  Text(s('refreshError')),
+                  TextButton(
+                    key: const ValueKey('dialog_retry_refresh'),
+                    onPressed: view.busy
+                        ? null
+                        : ref.read(appControllerProvider.notifier).reload,
+                    child: Text(s('retry')),
+                  ),
+                ] else if (_error != null && _error != 'refreshError') ...[
                   const SizedBox(height: 16),
                   Text(
                     s(_error!),
@@ -296,7 +370,7 @@ class _TaskDialogState extends ConsumerState<_TaskDialog> {
         ),
         FilledButton(
           key: const ValueKey('save_task'),
-          onPressed: view.busy
+          onPressed: view.busy || view.needsRefresh
               ? null
               : () async {
                   if (!_form.currentState!.validate()) return;

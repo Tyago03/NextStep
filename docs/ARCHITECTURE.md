@@ -20,6 +20,12 @@ On a storage failure, it retains the last usable snapshot and reports a localize
 error. Form fields remain available for correction or retry. The UI does not
 optimistically show an uncommitted database mutation as complete.
 
+A successful mutation followed by a failed snapshot read is treated separately:
+the saved form closes, a persistent refresh warning appears, and new mutations
+are blocked until a read succeeds. Retrying the warning reads existing data;
+it never repeats the completed insert. A modal already open during a refresh
+failure offers the same read retry while retaining its fields.
+
 Riverpod is used without generated provider code. The official `material_ui`
 package supplies Material components and localization delegates; it replaces the
 deprecated `package:flutter/material.dart` import in the pinned Flutter release.
@@ -117,7 +123,8 @@ discard a pending or failed draft. Successful unrelated actions do not falsely
 mark that draft as saved.
 
 Pause and completion wait for queued writes, then commit the current field value
-with the transition. The explicit Save note action retries a write. Mutating
+with the transition. A retry action appears only for an unsaved note when no
+save is pending. Mutating
 buttons are disabled while a command is in progress, and the controller rejects
 a second concurrent command. Note writes capture the repository before entering
 the queue, allowing already queued work to finish if the provider scope is
@@ -133,6 +140,12 @@ Today prioritizes the unfinished session. Otherwise, it considers goals by
 ascending position, then tasks by ascending position; IDs break ties. It suggests
 the first incomplete task whose estimate fits the available minutes. If none
 fits, it says so instead of silently recommending a longer task.
+
+Available-time presets apply immediately. A custom minute field remains
+available. These controls are hidden when a session is active or there is no
+unfinished task. New goals/tasks append after existing positions by default;
+priority order and reference links are available under More options. Numeric
+positions remain limited to 999, with IDs keeping appended items ordered on ties.
 
 Progress totals only completed sessions. It displays recorded durations,
 completion dates, snapshots, and notes. It does not estimate learning outcomes,

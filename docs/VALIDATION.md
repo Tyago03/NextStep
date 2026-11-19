@@ -30,16 +30,16 @@ Run from the repository root after `. .\tool\env.ps1`:
 
 | Command | Result | Evidence scope |
 | --- | --- | --- |
-| `dart format --output=none --set-exit-if-changed lib test integration_test` | Passed; 14 files, 0 changes | Includes both Android integration targets. |
+| `dart format --output=none --set-exit-if-changed lib test integration_test tool/visual_review_test.dart` | Passed; 15 files, 0 changes | Includes both Android integration targets and the development render script. |
 | `flutter analyze` | Passed; no issues found | Static analysis of the project and tests. |
-| `flutter test --reporter expanded` | Passed; 20/20 tests | 11 repository tests, 3 controller tests, and 6 widget tests on Windows. |
+| `flutter test --reporter expanded` | Passed; 35/35 tests | 14 repository tests, 5 controller tests, and 16 widget tests on Windows. |
 
-The final combined check above includes the controller's queued-write disposal
-fix. Repository tests use actual SQLite files and close/reopen their connections.
+The final combined check above includes the second QA round and committed-write
+refresh recovery. Repository tests use actual SQLite files and close/reopen their connections.
 They do not replace the Android plugin, packaging, process-restart, or device
 checks below.
 
-### What the 20 host tests cover
+### What the 35 host tests cover
 
 - Goal/task creation, editing, ordering, validation, preferences, and suggestions
   that respect available time and completion state.
@@ -57,6 +57,19 @@ checks below.
   scaling, including long titles, notes, and history.
 - Invalid form submissions, an actual closed-database save failure, and a failed
   note remaining visible after tab navigation.
+- Editing suggestions, cancellation/confirmation of deletes, historical records
+  after sibling deletion, and SQLite-trigger failure during completion proving
+  rollback before a safe retry.
+- A committed write followed by a failed refresh, blocked duplicate creation,
+  read-only retry, and note draft recovery after the same failure.
+- Immediate duration presets, alternative task selection, automatic append
+  order, accurate onboarding, and forms at 320px with 2x text plus keyboard insets.
+
+The seven-screen development render scenario also passed, separately from the
+35-test suite. All seven final PNGs were inspected. They render production
+widgets using SDK Roboto and Material icon fonts at 390 x 844 logical pixels;
+they do not capture the desktop or emulate Android system chrome/keyboard.
+See [QA_ROUND_2.md](QA_ROUND_2.md) for reproduction and the visual findings.
 
 ## Android results and remaining checks
 
@@ -65,6 +78,7 @@ checks below.
 | `flutter build apk --debug` | Passed; normal app copied to `dist/NextStep-debug.apk` before integration builds. |
 | Normal Android application install and launch | Passed: `adb install -r` returned Success; `am start -W` returned Status ok; process and top resumed activity confirmed; `nextstep.db` exists. |
 | Interactive desktop visual inspection | Blocked: Computer Use has not granted access to the emulator window. |
+| Development widget render review | Seven final images inspected after typography, hierarchy, spacing, and palette refinements; not a manual device test. |
 | `integration_test/session_flow_test.dart` on Android | Passed, 1/1, in the isolated integration package. |
 | `integration_test/process_restart_test.dart` across two Android processes | Both seed and verify passed, 1/1 each, with an explicit force-stop between executions and retained SQLite data. |
 | Physical Android device / profile-mode performance | Not performed. |
@@ -76,7 +90,7 @@ The final normal APK was rebuilt with `-t lib/main.dart`, checked to have the
 application ID `dev.tyago.nextstep`, installed, and left running on the emulator.
 The temporary `dev.tyago.nextstep.integration` package was removed after all
 integration stages passed. The delivered file is `dist/NextStep-debug.apk`
-(167,730,319 bytes); its SHA-256 is stored beside it in
+(167,738,991 bytes); its SHA-256 is stored beside it in
 `dist/NextStep-debug.apk.sha256`. No test fixture was inserted into the normal
 application database.
 

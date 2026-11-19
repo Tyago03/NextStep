@@ -11,8 +11,8 @@ with a 15-minute estimate, start a session, then pause with the note
 
 | Screen | Behavior |
 | --- | --- |
-| Today | Set available minutes, see an unfinished task that fits, or return to the current session. |
-| Plan | Create, edit, and delete goals and tasks; set task duration, priority order, and an optional reference link. |
+| Today | Choose quick or custom minutes, see an unfinished task that fits, choose another task, or return to the current session. |
+| Plan | Create, edit, and delete goals and tasks; new items append automatically, with priority order and reference links under More options. |
 | Session | Start, pause, resume, and complete a task and its session; save a next-step note. |
 | Progress | See completed sessions, their actual recorded time, title snapshots, and notes. |
 
@@ -29,9 +29,10 @@ At most one session can remain unfinished.
 ## Verified status
 
 On **19 November 2026**, formatting and static analysis passed on Windows, and
-all **20 repository, controller, and widget tests passed**. These include real
+all **35 repository, controller, and widget tests passed**. These include real
 SQLite file reopening, the complete UI flow, queued note writes, failed saves,
-and 320-pixel layouts with 2x text scaling.
+duplicate-save prevention after a failed refresh, and 320-pixel layouts with 2x
+text scaling and simulated keyboard insets.
 
 The Android debug build passed; the normal application APK is preserved at
 `dist/NextStep-debug.apk`. The Android core-flow test passed (1/1), and both
@@ -42,6 +43,9 @@ data between phases using `--no-uninstall`.
 The normal APK was installed and launched on the emulator, and its local database
 was verified. Desktop visual inspection remains blocked by Computer Use's
 emulator permission; automated Android UI tests are recorded separately.
+Seven development widget renders were visually reviewed after the UI polish.
+These are rendered app widgets with test fixtures, not emulator screenshots or
+human usability testing. See [the second QA round](docs/QA_ROUND_2.md).
 
 See [the validation record](docs/VALIDATION.md) for commands, scope, and outstanding
 checks. The GitHub Actions workflow is configured but has not run. Versioning is
@@ -171,7 +175,7 @@ versioning. Host tests use the same repository through `sqflite_common_ffi`.
 See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for state transitions and tradeoffs.
 
 Notes save in order as they are edited. The interface reports saving or failure;
-the explicit Save note button retries a failed write. Pause and completion wait
+a retry button appears for an unsaved note. Pause and completion wait
 for queued edits and commit the current note with the state transition. Deleting
 an active session's task or goal is blocked. Other deletions require confirmation
 and retain completed session history.

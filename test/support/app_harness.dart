@@ -30,15 +30,21 @@ Future<void> tapKey(WidgetTester tester, String key) async {
   if (target.evaluate().isEmpty) {
     // Drag the page's padding rather than a nested multiline text field.
     // The latter legitimately consumes vertical drags within the note editor.
-    for (
-      var attempt = 0;
-      attempt < 40 && target.evaluate().isEmpty;
-      attempt++
-    ) {
-      final viewport = find.byType(Scrollable).first;
-      final start = tester.getTopLeft(viewport) + const Offset(8, 240);
-      await tester.dragFrom(start, const Offset(0, -200));
-      await tester.pumpAndSettle(const Duration(milliseconds: 50));
+    for (final direction in [-1, 1]) {
+      for (
+        var attempt = 0;
+        attempt < 40 && target.evaluate().isEmpty;
+        attempt++
+      ) {
+        final viewport = find.byType(Scrollable).first;
+        final position = tester.state<ScrollableState>(viewport).position;
+        final previousOffset = position.pixels;
+        final height = tester.getSize(viewport).height;
+        final start = tester.getTopLeft(viewport) + Offset(8, height / 2);
+        await tester.dragFrom(start, Offset(0, 200.0 * direction));
+        await tester.pumpAndSettle(const Duration(milliseconds: 50));
+        if (position.pixels == previousOffset) break;
+      }
     }
   }
   expect(target, findsOneWidget, reason: 'Missing control: $key');
@@ -50,6 +56,14 @@ Future<void> tapKey(WidgetTester tester, String key) async {
 
 Future<void> fillField(WidgetTester tester, String key, String text) async {
   final field = find.byKey(ValueKey<String>(key));
+  final optionsKey = switch (key) {
+    'goal_position' => 'more_goal_options',
+    'task_position' || 'task_url' => 'more_task_options',
+    _ => null,
+  };
+  if (field.evaluate().isEmpty && optionsKey != null) {
+    await tapKey(tester, optionsKey);
+  }
   if (field.evaluate().isEmpty) {
     await tester.scrollUntilVisible(
       field,

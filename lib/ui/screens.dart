@@ -98,9 +98,19 @@ class TodayScreen extends ConsumerStatefulWidget {
 
 class _TodayScreenState extends ConsumerState<TodayScreen> {
   final _form = GlobalKey<FormState>();
-  late final _minutes = TextEditingController(
-    text: ref.read(appControllerProvider).snapshot!.availableMinutes.toString(),
-  );
+  late final TextEditingController _minutes;
+
+  @override
+  void initState() {
+    super.initState();
+    _minutes = TextEditingController(
+      text: ref
+          .read(appControllerProvider)
+          .snapshot!
+          .availableMinutes
+          .toString(),
+    );
+  }
 
   @override
   void dispose() {
@@ -116,6 +126,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
     final active = data.activeSession;
     final suggestion = data.suggestion;
     final controller = ref.read(appControllerProvider.notifier);
+    final colors = Theme.of(context).colorScheme;
     return _Page(
       children: [
         _Heading(s('todayTitle'), s('todayIntro')),
@@ -153,46 +164,118 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
               ],
             ),
           ),
-        _Panel(
-          child: Form(
-            key: _form,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextFormField(
-                  key: const ValueKey('available_minutes'),
-                  controller: _minutes,
-                  enabled: !view.busy,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: InputDecoration(
-                    labelText: s('available'),
-                    suffixText: 'min',
+        if (active == null && data.tasks.any((task) => !task.completed))
+          _Panel(
+            child: Form(
+              key: _form,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.schedule_rounded,
+                        color: colors.primary,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          s('availablePrompt'),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
                   ),
-                  validator: (value) =>
-                      validateNumber(value, s, isOrder: false),
-                ),
-                const SizedBox(height: 12),
-                OutlinedButton(
-                  key: const ValueKey('apply_minutes'),
-                  onPressed: view.busy
-                      ? null
-                      : () {
-                          if (!_form.currentState!.validate()) return;
-                          controller.run(
-                            (repository) => repository.savePreferences(
-                              availableMinutes: int.parse(_minutes.text),
-                            ),
-                          );
-                        },
-                  child: Text(s('apply')),
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      for (final minutes in [5, 15, 25, 45])
+                        ChoiceChip(
+                          key: ValueKey('time_preset_$minutes'),
+                          label: Text('$minutes min'),
+                          selected: data.availableMinutes == minutes,
+                          showCheckmark: false,
+                          selectedColor: colors.primaryContainer,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 8,
+                          ),
+                          onSelected: view.busy
+                              ? null
+                              : (_) {
+                                  FocusScope.of(context).unfocus();
+                                  _minutes.text = minutes.toString();
+                                  _form.currentState?.validate();
+                                  controller.run(
+                                    (repository) => repository.savePreferences(
+                                      availableMinutes: minutes,
+                                    ),
+                                  );
+                                },
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final input = TextFormField(
+                        key: const ValueKey('available_minutes'),
+                        controller: _minutes,
+                        enabled: !view.busy,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        decoration: InputDecoration(
+                          labelText: s('customTime'),
+                          suffixText: 'min',
+                        ),
+                        validator: (value) =>
+                            validateNumber(value, s, isOrder: false),
+                      );
+                      final apply = TextButton(
+                        key: const ValueKey('apply_minutes'),
+                        onPressed: view.busy
+                            ? null
+                            : () {
+                                if (!_form.currentState!.validate()) return;
+                                FocusScope.of(context).unfocus();
+                                controller.run(
+                                  (repository) => repository.savePreferences(
+                                    availableMinutes: int.parse(_minutes.text),
+                                  ),
+                                );
+                              },
+                        child: Text(s('apply')),
+                      );
+                      if (constraints.maxWidth < 240 ||
+                          MediaQuery.textScalerOf(context).scale(14) > 20) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [input, const SizedBox(height: 8), apply],
+                        );
+                      }
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: input),
+                          const SizedBox(width: 8),
+                          apply,
+                        ],
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
         if (active == null && suggestion != null)
           _Panel(
+            color: colors.primaryContainer.withValues(alpha: .45),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -230,6 +313,12 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
                   icon: const Icon(Icons.play_arrow_rounded),
                   label: Text(s('start')),
                 ),
+                const SizedBox(height: 8),
+                TextButton(
+                  key: const ValueKey('choose_another_task'),
+                  onPressed: () => widget.onNavigate(1),
+                  child: Text(s('chooseAnotherTask')),
+                ),
               ],
             ),
           ),
@@ -240,21 +329,25 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
                 : Icons.check_circle_outline_rounded,
             title: s(
               data.tasks.isEmpty
-                  ? 'emptyToday'
+                  ? data.goals.isEmpty
+                        ? 'emptyToday'
+                        : 'firstTask'
                   : data.tasks.every((task) => task.completed)
                   ? 'allDone'
                   : 'noFit',
             ),
             body: s(
               data.tasks.isEmpty
-                  ? 'emptyTodayBody'
+                  ? data.goals.isEmpty
+                        ? 'emptyTodayBody'
+                        : 'firstTaskBody'
                   : data.tasks.every((task) => task.completed)
                   ? 'allDoneBody'
                   : 'noFitBody',
             ),
             action: OutlinedButton(
               onPressed: () => widget.onNavigate(1),
-              child: Text(s('openPlan')),
+              child: Text(s(data.goals.isEmpty ? 'openPlan' : 'viewPlan')),
             ),
           ),
         Text(
@@ -307,10 +400,6 @@ class PlanScreen extends ConsumerWidget {
                       ?.copyWith(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  '${s('orderLabel')} ${goal.position}',
-                  style: Theme.of(context).textTheme.labelMedium,
-                ),
                 Wrap(
                   spacing: 8,
                   children: [
@@ -383,7 +472,7 @@ class PlanScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          '${task.minutes} min • ${s('orderLabel')} ${task.position}${task.completed ? ' • ${s('taskDone')}' : ''}',
+                          '${task.minutes} min${task.completed ? ' • ${s('taskDone')}' : ''}',
                         ),
                         if (task.url != null)
                           _ReferenceLink(url: task.url!, s: s),
@@ -541,6 +630,31 @@ class _SessionDetailState extends ConsumerState<_SessionDetail> {
     final task = view.snapshot!.tasks
         .where((task) => task.id == session.taskId)
         .firstOrNull;
+    final unsavedNote = controller.hasUnsavedNote(session);
+    final colors = Theme.of(context).colorScheme;
+    final completeButton = OutlinedButton.icon(
+      key: const ValueKey('complete_session'),
+      onPressed: view.busy
+          ? null
+          : () async {
+              if (!await confirmAction(
+                context,
+                s,
+                title: 'completeTitle',
+                message: 'completeBody',
+                action: 'complete',
+              )) {
+                return;
+              }
+              final saved = await controller.run(
+                (repository) =>
+                    repository.completeSession(session.id, _note.text),
+              );
+              if (saved) widget.onNavigate(3);
+            },
+      icon: const Icon(Icons.check_rounded),
+      label: Text(s('complete')),
+    );
     return _Page(
       children: [
         _Heading(session.taskTitle, session.goalTitle),
@@ -549,9 +663,23 @@ class _SessionDetailState extends ConsumerState<_SessionDetail> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                s(session.status.name),
-                style: Theme.of(context).textTheme.labelLarge,
+              Row(
+                children: [
+                  Icon(
+                    running
+                        ? Icons.timelapse_rounded
+                        : Icons.pause_circle_outline_rounded,
+                    color: colors.primary,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      s(session.status.name),
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
               FittedBox(
@@ -569,19 +697,29 @@ class _SessionDetailState extends ConsumerState<_SessionDetail> {
               const SizedBox(height: 16),
               Text(s(running ? 'timerHelp' : 'pausedHelp')),
               const SizedBox(height: 24),
-              FilledButton.icon(
-                key: ValueKey(running ? 'pause_session' : 'resume_session'),
-                onPressed: view.busy
-                    ? null
-                    : () => controller.run(
-                        (repository) => running
-                            ? repository.pauseSession(session.id, _note.text)
-                            : repository.resumeSession(session.id),
-                      ),
-                icon: Icon(
-                  running ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                ),
-                label: Text(s(running ? 'pause' : 'resume')),
+              Wrap(
+                spacing: 10,
+                runSpacing: 12,
+                children: [
+                  FilledButton.icon(
+                    key: ValueKey(running ? 'pause_session' : 'resume_session'),
+                    onPressed: view.busy
+                        ? null
+                        : () => controller.run(
+                            (repository) => running
+                                ? repository.pauseSession(
+                                    session.id,
+                                    _note.text,
+                                  )
+                                : repository.resumeSession(session.id),
+                          ),
+                    icon: Icon(
+                      running ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                    ),
+                    label: Text(s(running ? 'pause' : 'resume')),
+                  ),
+                  completeButton,
+                ],
               ),
             ],
           ),
@@ -606,56 +744,60 @@ class _SessionDetailState extends ConsumerState<_SessionDetail> {
               ),
               const SizedBox(height: 8),
               Semantics(
-                liveRegion: true,
-                child: Text(
-                  s(
-                    view.savingNote
-                        ? 'savingNote'
-                        : controller.hasUnsavedNote(session)
-                        ? 'noteError'
-                        : 'savedNote',
-                  ),
+                // Announce failures, not every saving/saved change while typing.
+                liveRegion: unsavedNote && !view.savingNote,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      view.savingNote
+                          ? Icons.sync_rounded
+                          : unsavedNote
+                          ? Icons.error_outline_rounded
+                          : Icons.check_circle_outline_rounded,
+                      size: 18,
+                      color: unsavedNote && !view.savingNote
+                          ? colors.error
+                          : colors.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        s(
+                          view.savingNote
+                              ? 'savingNote'
+                              : unsavedNote
+                              ? 'noteError'
+                              : 'savedNote',
+                        ),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: unsavedNote && !view.savingNote
+                              ? colors.error
+                              : colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                key: const ValueKey('save_note'),
-                onPressed: view.busy
-                    ? null
-                    : () => controller.run(
-                        (repository) =>
-                            repository.saveNote(session.id, _note.text),
-                      ),
-                icon: const Icon(Icons.save_outlined),
-                label: Text(s('saveNote')),
-              ),
+              if (unsavedNote && !view.savingNote) ...[
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  key: const ValueKey('save_note'),
+                  onPressed: view.busy
+                      ? null
+                      : () => controller.run(
+                          (repository) =>
+                              repository.saveNote(session.id, _note.text),
+                        ),
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: Text(s('retryNote')),
+                ),
+              ],
             ],
           ),
         ),
         if (task?.url != null) _ReferenceLink(url: task!.url!, s: s),
-        OutlinedButton.icon(
-          key: const ValueKey('complete_session'),
-          onPressed: view.busy
-              ? null
-              : () async {
-                  if (!await confirmAction(
-                    context,
-                    s,
-                    title: 'completeTitle',
-                    message: 'completeBody',
-                    action: 'complete',
-                  )) {
-                    return;
-                  }
-                  final saved = await controller.run(
-                    (repository) =>
-                        repository.completeSession(session.id, _note.text),
-                  );
-                  if (saved) widget.onNavigate(3);
-                },
-          icon: const Icon(Icons.check_rounded),
-          label: Text(s('complete')),
-        ),
       ],
     );
   }
