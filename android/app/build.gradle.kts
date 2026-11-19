@@ -4,6 +4,13 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Flutter 3.50 wraps integration targets in build/test/listener_<n>.dart.
+// Keep that runner in its own sandbox, separate from the normal application.
+val flutterTarget = (project.findProperty("target") as? String)
+    .orEmpty().replace('\\', '/')
+val integrationTarget = flutterTarget.contains("integration_test/") ||
+    flutterTarget.contains("/build/test/listener_")
+
 android {
     namespace = "dev.tyago.nextstep"
     compileSdk = flutter.compileSdkVersion
@@ -17,6 +24,9 @@ android {
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "dev.tyago.nextstep"
+        if (integrationTarget) {
+            applicationIdSuffix = ".integration"
+        }
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

@@ -3,7 +3,7 @@
         android:label="NextStep"
         android:allowBackup="false"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@drawable/ic_nextstep">
         <activity
             android:name=".MainActivity"
             android:exported="true"
