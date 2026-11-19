@@ -11,6 +11,8 @@ $env:ANDROID_AVD_HOME = Join-Path $NextStepTools 'avd'
 $env:FLUTTER_SUPPRESS_ANALYTICS = 'true'
 $env:DART_SUPPRESS_ANALYTICS = 'true'
 $env:CI = 'true'
+$env:APPDATA = Join-Path $NextStepTools 'appdata'
+New-Item -ItemType Directory -Path $env:APPDATA -Force | Out-Null
 $jdk = Get-ChildItem -LiteralPath (Join-Path $NextStepTools 'jdk') -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
 if ($jdk) { $env:JAVA_HOME = $jdk.FullName }
 $env:PATH = (Join-Path $NextStepTools 'flutter\bin') + ';' + (Join-Path $env:ANDROID_HOME 'platform-tools') + ';' + (Join-Path $env:ANDROID_HOME 'emulator') + ';' + $env:PATH
