@@ -8,6 +8,9 @@ account is deliberately not activated yet. The delivered unconfigured build
 does not generate live AI plans or substitute fake answers. Manual planning
 works normally. See [AI setup](docs/AI_SETUP.md) and [AI validation](docs/AI_VALIDATION.md).
 
+The [editable project briefing](NextStep_Briefing_Atualizado.md) records the
+current scope and explains how to review future changes supplied by Tyago.
+
 Example: create **Understand DNS**, add **Look up a domain and record the answer**
 with a 15-minute estimate, start a session, then pause with the note
 **Next: compare A and AAAA records**. Reopen the app to resume that same session.
