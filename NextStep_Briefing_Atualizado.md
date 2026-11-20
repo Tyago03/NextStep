@@ -166,8 +166,11 @@ complexidade do MVP. A migração v1 → v2 preserva dados antigos e acrescenta
 detalhes das tarefas, rascunho e registro de importações.
 
 O código está separado em `lib/ui`, `lib/application`, `lib/domain` e `lib/data`.
-O versionamento é local; não há publicação em loja nem execução comprovada do
-workflow remoto. Os commits recentes de implementação são:
+O repositório GitHub é **privado**, em [Tyago03/NextStep](https://github.com/Tyago03/NextStep),
+mantendo a branch `codex/mvp` e o histórico local. SDKs, caches, bancos, configuração
+Firebase e APKs não entram no Git. Não há publicação em loja; resultados remotos
+devem ser conferidos na aba Actions, separadamente dos testes locais registrados
+abaixo. Os commits recentes de implementação são:
 
 - `142d78a`: persistência dos planos e migração segura.
 - `bd8d403`: integração Gemini preparada, revisão e confirmação das propostas.

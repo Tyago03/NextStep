@@ -11,6 +11,10 @@ works normally. See [AI setup](docs/AI_SETUP.md) and [AI validation](docs/AI_VAL
 The [editable project briefing](NextStep_Briefing_Atualizado.md) records the
 current scope and explains how to review future changes supplied by Tyago.
 
+The project repository is **private**: [Tyago03/NextStep](https://github.com/Tyago03/NextStep).
+The existing development branch is `codex/mvp`. Local SDKs, caches, databases,
+Firebase configuration and APK outputs are excluded from Git.
+
 Example: create **Understand DNS**, add **Look up a domain and record the answer**
 with a 15-minute estimate, start a session, then pause with the note
 **Next: compare A and AAAA records**. Reopen the app to resume that same session.
@@ -59,8 +63,9 @@ These are rendered app widgets with test fixtures, not emulator screenshots or
 human usability testing. See [the second QA round](docs/QA_ROUND_2.md).
 
 See [the validation record](docs/VALIDATION.md) for commands, scope, and outstanding
-checks. The GitHub Actions workflow is configured but has not run. Versioning is
-local Git; no remote repository or public release is claimed.
+checks. At that checkpoint, the GitHub Actions workflow had not run and Git
+versioning was local. The repository is now hosted privately on GitHub; consult
+its Actions tab for remote checks. No public release or store publication is claimed.
 
 The newer AI implementation and its additional tests are documented in
 [AI_VALIDATION.md](docs/AI_VALIDATION.md). The counts above describe the earlier
