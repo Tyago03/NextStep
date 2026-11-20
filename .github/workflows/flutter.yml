@@ -56,6 +56,7 @@ jobs:
           target: google_apis
           disable-animations: true
           script: |
+            flutter test integration_test/ai_planning_test.dart -d emulator-5554 --no-uninstall --reporter expanded
             flutter test integration_test/session_flow_test.dart -d emulator-5554 --no-uninstall --reporter expanded
             flutter test integration_test/process_restart_test.dart -d emulator-5554 --no-uninstall --dart-define=NEXTSTEP_RESTART_PHASE=seed --reporter expanded
             adb -s emulator-5554 shell am force-stop dev.tyago.nextstep.integration

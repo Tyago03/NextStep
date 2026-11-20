@@ -4,6 +4,8 @@ $ErrorActionPreference = 'Stop'
 Push-Location $NextStepRoot
 try {
     New-Item -ItemType Directory -Path local-validation -Force | Out-Null
+    & flutter test integration_test/ai_planning_test.dart -d $Device --no-uninstall --reporter expanded 2>&1 | Tee-Object -FilePath local-validation/android-ai-flow.log
+    if ($LASTEXITCODE -ne 0) { throw 'Android AI proposal fixture integration failed' }
     & flutter test integration_test/session_flow_test.dart -d $Device --no-uninstall --reporter expanded 2>&1 | Tee-Object -FilePath local-validation/android-flow.log
     if ($LASTEXITCODE -ne 0) { throw 'Android UI integration failed' }
     & flutter test integration_test/process_restart_test.dart -d $Device --no-uninstall --dart-define=NEXTSTEP_RESTART_PHASE=seed --reporter expanded 2>&1 | Tee-Object -FilePath local-validation/android-restart-seed.log

@@ -1,4 +1,4 @@
-param([string]$Device = 'emulator-5554')
+param([string]$Device = 'emulator-5554', [string]$AiConfig)
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'env.ps1')
 Push-Location $NextStepRoot
@@ -18,7 +18,16 @@ try {
         } until ($booted -match '1' -or (Get-Date) -gt $deadline)
         if ($booted -notmatch '1') { throw 'Emulator did not boot within 3 minutes. Run flutter doctor -v.' }
     }
-    & flutter run -d $Device
+    if (!$AiConfig) {
+        $defaultConfig = Join-Path $NextStepRoot 'config\firebase.local.json'
+        if (Test-Path -LiteralPath $defaultConfig) { $AiConfig = $defaultConfig }
+    }
+    $flutterArguments = @('run', '-d', $Device)
+    if ($AiConfig) {
+        $resolvedConfig = (Resolve-Path -LiteralPath $AiConfig).Path
+        $flutterArguments += "--dart-define-from-file=$resolvedConfig"
+    }
+    & flutter @flutterArguments
     if ($LASTEXITCODE -ne 0) { throw 'flutter run failed' }
 } finally {
     Pop-Location

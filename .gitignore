@@ -26,3 +26,6 @@ android/app/release/
 local-validation/
 .env
 .env.*
+config/*.local.json
+google-services.json
+android/app/google-services.json

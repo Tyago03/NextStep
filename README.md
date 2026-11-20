@@ -1,7 +1,12 @@
 # NextStep
 
-A small, offline Flutter app that turns a study goal into a concrete next action
-and preserves the context needed after an interruption.
+A small Flutter app that stores study plans on the device and preserves context
+after an interruption. Optional online AI proposes detailed plans for review.
+
+**Version 0.2.0:** Gemini/Firebase integration is prepared, but the developer
+account is deliberately not activated yet. The delivered unconfigured build
+does not generate live AI plans or substitute fake answers. Manual planning
+works normally. See [AI setup](docs/AI_SETUP.md) and [AI validation](docs/AI_VALIDATION.md).
 
 Example: create **Understand DNS**, add **Look up a domain and record the answer**
 with a 15-minute estimate, start a session, then pause with the note
@@ -15,10 +20,13 @@ with a 15-minute estimate, start a session, then pause with the note
 | Plan | Create, edit, and delete goals and tasks; new items append automatically, with priority order and reference links under More options. |
 | Session | Start, pause, resume, and complete a task and its session; save a next-step note. |
 | Progress | See completed sessions, their actual recorded time, title snapshots, and notes. |
+| AI planning | Describe a topic and routine, review a dated proposal with steps and completion checks, then explicitly confirm before any tasks are created. |
 
 The interface supports Portuguese and English, empty plans, narrow screens, and
 enlarged text. Data is stored in SQLite on the device. There is no account,
-backend, advertising, subscription, or AI feature inside the app. Reference links
+cloud plan storage, advertising, or subscription. Optional AI generation sends
+the supplied topic and study preferences to Google after the user requests it;
+the free tier may use that content to improve Google services. Reference links
 open the device's external browser only when selected.
 
 **Time policy:** a running session continues counting when the app is closed.
@@ -26,7 +34,7 @@ Pause explicitly to stop the clock. Reopening a paused session keeps its elapsed
 time unchanged. **Complete task and session** finishes both in one transaction.
 At most one session can remain unfinished.
 
-## Verified status
+## Earlier QA checkpoint
 
 On **19 November 2026**, formatting and static analysis passed on Windows, and
 all **35 repository, controller, and widget tests passed**. These include real
@@ -50,6 +58,10 @@ human usability testing. See [the second QA round](docs/QA_ROUND_2.md).
 See [the validation record](docs/VALIDATION.md) for commands, scope, and outstanding
 checks. The GitHub Actions workflow is configured but has not run. Versioning is
 local Git; no remote repository or public release is claimed.
+
+The newer AI implementation and its additional tests are documented in
+[AI_VALIDATION.md](docs/AI_VALIDATION.md). The counts above describe the earlier
+QA checkpoint, not the current suite.
 
 ## Run on the prepared Windows machine
 
@@ -147,8 +159,8 @@ flutter pub get --enforce-lockfile
 dart format --output=none --set-exit-if-changed lib test integration_test
 flutter analyze
 flutter test --reporter expanded
-flutter build apk --debug
 .\tool\verify-android.ps1
+.\tool\build-android.ps1
 ```
 
 A normal debug build writes `build/app/outputs/flutter-apk/app-debug.apk`.
@@ -157,13 +169,14 @@ APK at `dist/NextStep-debug.apk` or rebuild the normal target before installing 
 user-facing copy. Android integration requires a running emulator or authorized
 device; it is separate from `flutter test`.
 
-`tool/verify-android.ps1` runs the core flow and the seed/verify restart phases,
+`tool/verify-android.ps1` runs AI planning with explicit test fixtures, the core
+session flow, and the seed/verify restart phases,
 with an explicit force-stop between phases. Its verified integration application
 ID is `dev.tyago.nextstep.integration`; the normal runner launches
 `dev.tyago.nextstep`. APK metadata and installed-package checks confirmed both
 IDs. Every integration command uses `--no-uninstall` to preserve test data
 between invocations. Instructions and evidence are in
-[VALIDATION.md](docs/VALIDATION.md).
+[AI_VALIDATION.md](docs/AI_VALIDATION.md).
 
 ## Architecture and data
 

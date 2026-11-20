@@ -1,5 +1,8 @@
 # Validation record
 
+This records the original MVP checkpoint. The later AI integration, current
+test counts, and v0.2.0 APK are recorded in [AI_VALIDATION.md](AI_VALIDATION.md).
+
 Recorded on **19 November 2026**. Results below describe commands actually run
 locally, separately from checks that are implemented or configured but pending.
 No screenshot, successful compile, or Windows-hosted test is used as a substitute

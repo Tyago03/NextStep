@@ -9,6 +9,26 @@ import '../application/app_controller.dart';
 import '../domain/models.dart';
 import 'plan_dialogs.dart';
 import 'strings.dart';
+import 'ai_plan_screen.dart';
+import 'task_study_guide.dart';
+
+class _AiPlanButton extends StatelessWidget {
+  const _AiPlanButton({required this.s, required this.onNavigate});
+  final Strings s;
+  final ValueChanged<int> onNavigate;
+
+  @override
+  Widget build(BuildContext context) => OutlinedButton.icon(
+    key: const ValueKey('open_ai_plan'),
+    onPressed: () async {
+      final imported = await Navigator.of(context)
+          .push<bool>(MaterialPageRoute(builder: (_) => const AIPlanScreen()));
+      if (context.mounted && imported == true) onNavigate(1);
+    },
+    icon: const Icon(Icons.auto_awesome_outlined),
+    label: Text(s('planWithAi')),
+  );
+}
 
 class _Page extends StatelessWidget {
   const _Page({required this.children});
@@ -345,9 +365,17 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
                   ? 'allDoneBody'
                   : 'noFitBody',
             ),
-            action: OutlinedButton(
-              onPressed: () => widget.onNavigate(1),
-              child: Text(s(data.goals.isEmpty ? 'openPlan' : 'viewPlan')),
+            action: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                if (data.goals.isEmpty)
+                  _AiPlanButton(s: s, onNavigate: widget.onNavigate),
+                OutlinedButton(
+                  onPressed: () => widget.onNavigate(1),
+                  child: Text(s(data.goals.isEmpty ? 'openPlan' : 'viewPlan')),
+                ),
+              ],
             ),
           ),
         Text(
@@ -375,11 +403,18 @@ class PlanScreen extends ConsumerWidget {
         _Heading(s('planTitle'), s('planIntro')),
         Align(
           alignment: Alignment.centerLeft,
-          child: FilledButton.icon(
-            key: const ValueKey('add_goal'),
-            onPressed: view.busy ? null : () => editGoal(context),
-            icon: const Icon(Icons.add_rounded),
-            label: Text(s('addGoal')),
+          child: Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            children: [
+              FilledButton.icon(
+                key: const ValueKey('add_goal'),
+                onPressed: view.busy ? null : () => editGoal(context),
+                icon: const Icon(Icons.add_rounded),
+                label: Text(s('addGoal')),
+              ),
+              _AiPlanButton(s: s, onNavigate: onNavigate),
+            ],
           ),
         ),
         const SizedBox(height: 24),
@@ -400,6 +435,17 @@ class PlanScreen extends ConsumerWidget {
                       ?.copyWith(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 4),
+                if (goal.description.isNotEmpty)
+                  ExpansionTile(
+                    tilePadding: EdgeInsets.zero,
+                    title: Text(s('aboutPlan')),
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Text(goal.description),
+                      ),
+                    ],
+                  ),
                 Wrap(
                   spacing: 8,
                   children: [
@@ -474,6 +520,12 @@ class PlanScreen extends ConsumerWidget {
                         Text(
                           '${task.minutes} min${task.completed ? ' • ${s('taskDone')}' : ''}',
                         ),
+                        if (task.scheduledDate != null)
+                          Text(
+                            '${s('scheduledFor')} ${MaterialLocalizations.of(context).formatMediumDate(task.scheduledDate!)}',
+                          ),
+                        if (task.steps.isNotEmpty)
+                          TaskStudyGuide(task: task, s: s),
                         if (task.url != null)
                           _ReferenceLink(url: task.url!, s: s),
                         Wrap(
@@ -724,6 +776,10 @@ class _SessionDetailState extends ConsumerState<_SessionDetail> {
             ],
           ),
         ),
+        if (task != null && task.steps.isNotEmpty)
+          _Panel(
+            child: TaskStudyGuide(task: task, s: s, expanded: true),
+          ),
         _Panel(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

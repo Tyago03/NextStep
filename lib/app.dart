@@ -2,20 +2,30 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'application/app_controller.dart';
+import 'application/ai_plan_controller.dart';
+import 'application/study_plan_generator.dart';
 import 'data/nextstep_repository.dart';
 import 'ui/screens.dart';
 import 'ui/strings.dart';
 
 class NextStepApp extends StatelessWidget {
-  const NextStepApp({super.key, required this.repository, this.clock});
+  const NextStepApp({
+    super.key,
+    required this.repository,
+    this.clock,
+    this.aiGenerator,
+  });
   final NextStepRepository repository;
   final DateTime Function()? clock;
+  final StudyPlanGenerator? aiGenerator;
 
   @override
   Widget build(BuildContext context) => ProviderScope(
     overrides: [
       repositoryProvider.overrideWithValue(repository),
       if (clock != null) clockProvider.overrideWithValue(clock!),
+      if (aiGenerator != null)
+        aiGeneratorProvider.overrideWithValue(aiGenerator!),
     ],
     child: const _Application(),
   );

@@ -2,7 +2,9 @@
 
 NextStep is a small Android-first Flutter application. Its central workflow is
 **plan a concrete task -> start -> pause with context -> reopen -> resume ->
-complete -> inspect history**. It has no backend or account boundary.
+complete -> inspect history**. Plans stay in local SQLite without user login.
+Optional online generation uses Firebase AI Logic and has no direct write access
+to tasks. Developer-account activation is deferred; see [AI_SETUP.md](AI_SETUP.md).
 
 ## Code boundaries
 
@@ -14,6 +16,9 @@ complete -> inspect history**. It has no backend or account boundary.
 | `lib/application/app_controller.dart` | Load snapshots, serialize writes, prevent duplicate commands, retain failed note drafts, and surface errors. |
 | `lib/domain/models.dart` | Immutable goals, tasks, sessions, snapshot selection rules, and elapsed-time calculation. |
 | `lib/data/nextstep_repository.dart` | SQLite schema, validation, transactions, CRUD, state transitions, and persistence. |
+| `lib/domain/study_plan.dart` | Bounded structured proposals and deterministic study-date calculation. |
+| `lib/application/ai_plan_controller.dart` | Separate persistent drafts and explicit confirmation/import. |
+| `lib/data/firebase_study_plan_generator.dart` | Lazy Firebase/App Check initialization, structured Gemini request, validation, and translated failure codes. |
 
 The controller publishes an immutable snapshot after a successful write/read.
 On a storage failure, it retains the last usable snapshot and reports a localized
@@ -41,8 +46,15 @@ direct tests instead of generated type checking.
 
 `sqflite_common_ffi` is a development dependency used to execute the same
 repository against real SQLite files on the Windows test host. The Android app
-uses the native `sqflite` plugin. Schema version is currently **1**; future schema
+uses the native `sqflite` plugin. Schema version is currently **2**; future schema
 changes must add a migration and migration tests rather than delete user data.
+
+The v1-to-v2 migration adds goal descriptions, structured task guidance and
+scheduled dates, a single proposal draft, and durable import IDs. It preserves
+the original tables, sessions, notes and preferences. Importing a proposal inserts
+one goal and all its tasks atomically, records its ID, and deletes only its own
+draft. A retry cannot duplicate a committed plan, including after a process restart.
+The provider is never called when merely loading an existing draft.
 
 Android integration targets use a separate, verified application sandbox:
 `dev.tyago.nextstep.integration`, while the normal app remains
@@ -57,16 +69,18 @@ runner targets `dev.tyago.nextstep.integration` for a force-stop between those
 phases; it does not clear app data. `tool/verify-android.ps1` implements the
 sequence, while `tool/run-android.ps1` continues to launch the normal application.
 The complete integration sequence passed on the emulator, as recorded in
-[VALIDATION.md](VALIDATION.md).
+[AI_VALIDATION.md](AI_VALIDATION.md).
 
 ## Persistent records
 
 | Table | Main stored fields / constraints |
 | --- | --- |
-| `goals` | Title (1-120 characters), position (0-999). |
-| `tasks` | Goal reference, title, estimate (1-240 minutes), position, optional HTTP(S) URL, completed flag. |
+| `goals` | Title (1-120 characters), position (0-999), optional plan description. |
+| `tasks` | Goal reference, title, estimate (1-240 minutes), position, optional HTTP(S) URL, completed flag; optional topic, study date, steps and completion check. |
 | `sessions` | Optional task reference, goal/task title snapshots, status, UTC timestamps, accumulated milliseconds, next-step note (up to 2,000 characters), active slot. |
 | `preferences` | One row containing available minutes (default 25) and language (`pt` by default, or `en`). |
+| `plan_draft` | One validated proposal payload, separate from active goals/tasks. |
+| `plan_imports` | Unique proposal ID and import timestamp, retained to prevent duplicate imports. |
 
 Foreign keys are enabled on every connection. A session's title snapshots are
 recorded when it starts, so later plan edits do not rewrite history. Deleting a
@@ -159,8 +173,11 @@ flow. The Android manifest sets `allowBackup="false"`; the app does not implemen
 cloud backup. Clearing app data or uninstalling can remove the local records.
 
 HTTP(S) links are validated and launched in an external browser on request. No
-remote content is fetched to generate tasks or suggestions. There is no embedded
-AI, advertisement SDK, or sign-in flow.
+remote content is fetched for ordinary manual suggestions. Explicit AI generation
+sends the supplied topic and routine to Gemini through Firebase AI Logic, with
+App Check. No existing plans or session history are included. There is no
+advertisement SDK or sign-in flow. All tests use explicit fixtures instead of
+live AI responses until the developer project is activated.
 
 The UI has Portuguese and English strings, scrollable forms and screens, and
 larger-text navigation that uses two rows rather than compressing four labels.
