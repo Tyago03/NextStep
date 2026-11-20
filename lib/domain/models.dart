@@ -9,11 +9,17 @@ class DomainException implements Exception {
 }
 
 class Goal {
-  const Goal({required this.id, required this.title, required this.position});
+  const Goal({
+    required this.id,
+    required this.title,
+    required this.position,
+    this.description = '',
+  });
 
   final int id;
   final String title;
   final int position;
+  final String description;
 }
 
 class PlanTask {
@@ -25,6 +31,10 @@ class PlanTask {
     required this.position,
     this.url,
     required this.completed,
+    this.topic,
+    this.scheduledDate,
+    this.steps = const [],
+    this.completionCheck,
   });
 
   final int id;
@@ -34,6 +44,10 @@ class PlanTask {
   final int position;
   final String? url;
   final bool completed;
+  final String? topic;
+  final DateTime? scheduledDate;
+  final List<String> steps;
+  final String? completionCheck;
 }
 
 enum SessionStatus { running, paused, completed }

@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:sqflite/sqflite.dart';
 
 import '../domain/models.dart';
+import '../domain/study_plan.dart';
 
 /// Small transactional SQLite store shared by the mobile app and FFI tests.
 class NextStepRepository {
@@ -20,7 +23,7 @@ class NextStepRepository {
     final db = await selectedFactory.openDatabase(
       databasePath,
       options: OpenDatabaseOptions(
-        version: 1,
+        version: 2,
         onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
         onCreate: (db, version) async {
           await db.execute('''
@@ -75,6 +78,10 @@ class NextStepRepository {
           });
           await db.execute('CREATE INDEX tasks_goal ON tasks(goal_id)');
           await db.execute('CREATE INDEX sessions_task ON sessions(task_id)');
+          await _upgradeToV2(db);
+        },
+        onUpgrade: (db, oldVersion, newVersion) async {
+          if (oldVersion < 2) await _upgradeToV2(db);
         },
       ),
     );
@@ -321,6 +328,115 @@ class NextStepRepository {
 
   Future<void> close() => _db.close();
 
+  /// Preview is stored separately; generating a plan never modifies the plan.
+  Future<void> savePlanDraft(StudyPlanProposal proposal) async {
+    final validated = StudyPlanProposal.fromJson(proposal.toJson());
+    await _db.insert('plan_draft', {
+      'id': 1,
+      'proposal_id': validated.id,
+      'payload': jsonEncode(validated.toJson()),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<StudyPlanProposal?> loadPlanDraft() async {
+    final rows = await _db.query('plan_draft', where: 'id = 1');
+    if (rows.isEmpty) return null;
+    final payload = rows.single['payload']! as String;
+    if (utf8.encode(payload).length > maxStudyPlanJsonBytes) {
+      throw const FormatException('Stored study-plan JSON exceeds 128 KiB.');
+    }
+    final json = jsonDecode(payload);
+    if (json is! Map<String, dynamic>) {
+      throw const FormatException('Stored study plan is not an object.');
+    }
+    return StudyPlanProposal.fromJson(json);
+  }
+
+  Future<void> discardPlanDraft() async {
+    await _db.delete('plan_draft', where: 'id = 1');
+  }
+
+  /// Import is explicit, atomic and durable-idempotent across process restarts.
+  Future<void> importPlanProposal(StudyPlanProposal proposal) async {
+    final validated = StudyPlanProposal.fromJson(proposal.toJson());
+    await _db.transaction((txn) async {
+      final imported = await txn.query(
+        'plan_imports',
+        columns: ['proposal_id'],
+        where: 'proposal_id = ?',
+        whereArgs: [validated.id],
+      );
+      if (imported.isNotEmpty) {
+        await txn.delete(
+          'plan_draft',
+          where: 'proposal_id = ?',
+          whereArgs: [validated.id],
+        );
+        return;
+      }
+      final maxPosition = Sqflite.firstIntValue(
+        await txn.rawQuery('SELECT MAX(position) FROM goals'),
+      );
+      final position = maxPosition == null
+          ? 0
+          : (maxPosition + 1).clamp(0, 999);
+      final goalId = await txn.insert('goals', {
+        'title': validated.title,
+        'description': validated.summary,
+        'position': position,
+      });
+      for (var index = 0; index < validated.lessons.length; index++) {
+        final lesson = validated.lessons[index];
+        await txn.insert('tasks', {
+          'goal_id': goalId,
+          'title': lesson.title,
+          'minutes': lesson.minutes,
+          'position': index,
+          'topic': lesson.topic,
+          'scheduled_date': studyDateKey(lesson.scheduledDate),
+          'steps_json': jsonEncode(lesson.steps),
+          'completion_check': lesson.completionCheck,
+        });
+      }
+      await txn.insert('plan_imports', {
+        'proposal_id': validated.id,
+        'imported_at': _nowMs(),
+      });
+      // A more recent draft can replace this one while a preview is open.
+      // Importing the old preview must never remove that newer draft.
+      await txn.delete(
+        'plan_draft',
+        where: 'proposal_id = ?',
+        whereArgs: [validated.id],
+      );
+    });
+  }
+
+  static Future<void> _upgradeToV2(DatabaseExecutor db) async {
+    await db.execute(
+      "ALTER TABLE goals ADD COLUMN description TEXT NOT NULL DEFAULT ''",
+    );
+    await db.execute('ALTER TABLE tasks ADD COLUMN topic TEXT');
+    await db.execute('ALTER TABLE tasks ADD COLUMN scheduled_date TEXT');
+    await db.execute(
+      "ALTER TABLE tasks ADD COLUMN steps_json TEXT NOT NULL DEFAULT '[]'",
+    );
+    await db.execute('ALTER TABLE tasks ADD COLUMN completion_check TEXT');
+    await db.execute('''
+      CREATE TABLE plan_draft (
+        id INTEGER PRIMARY KEY CHECK(id = 1),
+        proposal_id TEXT NOT NULL,
+        payload TEXT NOT NULL
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE plan_imports (
+        proposal_id TEXT PRIMARY KEY NOT NULL,
+        imported_at INTEGER NOT NULL
+      )
+    ''');
+  }
+
   int _nowMs() => _clock().toUtc().millisecondsSinceEpoch;
 
   static Future<Map<String, Object?>> _requiredRow(
@@ -375,6 +491,7 @@ class NextStepRepository {
     id: row['id']! as int,
     title: row['title']! as String,
     position: row['position']! as int,
+    description: row['description']! as String,
   );
 
   static PlanTask _taskFromRow(Map<String, Object?> row) => PlanTask(
@@ -385,6 +502,14 @@ class NextStepRepository {
     position: row['position']! as int,
     url: row['url'] as String?,
     completed: row['completed'] == 1,
+    topic: row['topic'] as String?,
+    scheduledDate: row['scheduled_date'] == null
+        ? null
+        : DateTime.parse(row['scheduled_date']! as String),
+    steps: List<String>.unmodifiable(
+      (jsonDecode(row['steps_json']! as String) as List).cast<String>(),
+    ),
+    completionCheck: row['completion_check'] as String?,
   );
 
   static StudySession _sessionFromRow(Map<String, Object?> row) => StudySession(
