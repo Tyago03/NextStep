@@ -13,36 +13,45 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   sqfliteFfiInit();
 
-  testWidgets(
-    'plan, pause, reopen SQLite, resume, complete and inspect history',
-    (tester) async {
-      final directory = (await tester.runAsync(
-        () => Directory.systemTemp.createTemp('nextstep-widget-flow-'),
-      ))!;
-      final path = '${directory.path}/flow.db';
-      var now = DateTime.utc(2026, 1, 1, 12);
-      Future<NextStepRepository> open() => NextStepRepository.open(
-        path: path,
-        factory: databaseFactoryFfiNoIsolate,
-        clock: () => now,
-      );
-      var repository = (await tester.runAsync(open))!;
-      addTearDown(() async {
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.runAsync(() async {
-          await repository.close();
-          await directory.delete(recursive: true);
+  for (final compact in [false, true]) {
+    testWidgets(
+      'plan, pause, reopen SQLite, resume, complete and inspect history'
+      '${compact ? ' at 320x480' : ''}',
+      (tester) async {
+        if (compact) {
+          tester.view.physicalSize = const Size(320, 480);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+        }
+        final directory = (await tester.runAsync(
+          () => Directory.systemTemp.createTemp('nextstep-widget-flow-'),
+        ))!;
+        final path = '${directory.path}/flow.db';
+        var now = DateTime.utc(2026, 1, 1, 12);
+        Future<NextStepRepository> open() => NextStepRepository.open(
+          path: path,
+          factory: databaseFactoryFfiNoIsolate,
+          clock: () => now,
+        );
+        var repository = (await tester.runAsync(open))!;
+        addTearDown(() async {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.runAsync(() async {
+            await repository.close();
+            await directory.delete(recursive: true);
+          });
         });
-      });
-      await exerciseSessionFlow(
-        tester,
-        initialRepository: repository,
-        reopenStore: () async => repository = await open(),
-        clock: () => now,
-        advance: (duration) => now = now.add(duration),
-      );
-    },
-  );
+        await exerciseSessionFlow(
+          tester,
+          initialRepository: repository,
+          reopenStore: () async => repository = await open(),
+          clock: () => now,
+          advance: (duration) => now = now.add(duration),
+        );
+      },
+    );
+  }
 
   testWidgets(
     'empty screens remain usable at 320px with 200% text in PT and EN',

@@ -59,6 +59,7 @@ void main() {
       reason: 'The completed Generate action must persist its preview.',
     );
     final draft = savedDraft!;
+    await revealTarget(tester, find.text(draft.title));
     expect(find.text(draft.title), findsOneWidget);
     expect((await repository.load()).goals, isEmpty);
     expect((await repository.load()).tasks, isEmpty);
@@ -80,13 +81,18 @@ void main() {
     await _settleAi(tester);
     await tapKey(tester, 'nav_plan');
     await _tapAi(tester, 'open_ai_plan');
+    await revealTarget(tester, find.text(draft.title));
     expect(find.text(draft.title), findsOneWidget);
     expect(generator.calls, 0);
     expect((await repository.loadPlanDraft())!.id, draft.id);
 
     await _tapAi(tester, 'ai_confirm');
     expect((await repository.load()).goals, isEmpty);
-    await tester.tap(find.widgetWithText(TextButton, 'Cancelar'));
+    await tapTarget(
+      tester,
+      find.widgetWithText(TextButton, 'Cancelar'),
+      description: 'cancel_ai_import',
+    );
     await _settleAi(tester);
     expect((await repository.load()).goals, isEmpty);
     expect(await repository.loadPlanDraft(), isNotNull);
@@ -105,14 +111,11 @@ void main() {
     await tapKey(tester, 'nav_plan');
     await tapKey(tester, 'start_task_${task.id}');
     expect((await repository.load()).activeSession!.taskId, task.id);
-    await tester.scrollUntilVisible(
-      find.text(task.completionCheck!),
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.pumpAndSettle();
+    await revealTarget(tester, find.byKey(ValueKey('task_guide_${task.id}')));
     expect(find.byKey(ValueKey('task_guide_${task.id}')), findsOneWidget);
+    await revealTarget(tester, find.text('1. ${task.steps.first}'));
     expect(find.text('1. ${task.steps.first}'), findsOneWidget);
+    await revealTarget(tester, find.text(task.completionCheck!));
     expect(find.text(task.completionCheck!), findsOneWidget);
     now = now.add(const Duration(seconds: 60));
     await fillField(tester, 'session_note', 'Comparar a consulta com AAAA.');
@@ -136,12 +139,7 @@ void main() {
     final history = find.byKey(
       ValueKey('history_session_${completed.sessions.single.id}'),
     );
-    await tester.scrollUntilVisible(
-      history,
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.pumpAndSettle();
+    await revealTarget(tester, history);
     expect(history, findsOneWidget);
     expect(find.text(task.title), findsOneWidget);
     expect(generator.calls, 0);
@@ -167,55 +165,6 @@ Future<void> _settleAi(WidgetTester tester) async {
 }
 
 Future<void> _tapAi(WidgetTester tester, String key) async {
-  final target = find.byKey(ValueKey<String>(key));
-  if (target.evaluate().isEmpty) {
-    await tester.scrollUntilVisible(
-      target,
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
-  }
-  // On a real device pumpAndSettle can finish while a route snapshot or the
-  // platform keyboard still covers a laid-out widget. Wait for the real target
-  // to receive hit tests in two consecutive frames at the same position.
-  var ready = false;
-  var stableFrames = 0;
-  Offset? previousCenter;
-  for (var attempt = 0; attempt < 50; attempt++) {
-    await tester.ensureVisible(target);
-    await tester.pump(const Duration(milliseconds: 100));
-    final hitTarget = target.hitTestable();
-    if (hitTarget.evaluate().length != 1) {
-      stableFrames = 0;
-      previousCenter = null;
-      continue;
-    }
-    final widget = tester.widget(hitTarget);
-    final enabled = widget is! ButtonStyleButton || widget.onPressed != null;
-    if (!enabled) {
-      stableFrames = 0;
-      previousCenter = null;
-      continue;
-    }
-    final center = tester.getCenter(hitTarget);
-    final previous = previousCenter;
-    stableFrames = previous != null && (center - previous).distance < 0.5
-        ? stableFrames + 1
-        : 1;
-    previousCenter = center;
-    if (stableFrames >= 2) {
-      ready = true;
-      break;
-    }
-  }
-  expect(
-    ready,
-    isTrue,
-    reason:
-        'Control $key did not become enabled and hit-testable within 5 seconds. '
-        'No tap was sent; check route transitions, overlays or keyboard insets.',
-  );
-  // Send exactly one tap. Never retry after a possibly mutating action.
-  await tester.tap(target.hitTestable());
+  await tapTarget(tester, find.byKey(ValueKey<String>(key)), description: key);
   await _settleAi(tester);
 }

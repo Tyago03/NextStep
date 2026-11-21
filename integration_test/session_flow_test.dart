@@ -138,15 +138,7 @@ Future<void> _exerciseSessionEnding(
   expect(secondA.elapsedMs, 0);
   expect(secondA.note, noteA);
   final noteField = find.byKey(const ValueKey('session_note'));
-  if (noteField.evaluate().isEmpty) {
-    await tester.scrollUntilVisible(
-      noteField,
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
-  }
-  await tester.ensureVisible(noteField);
-  await tester.pumpAndSettle();
+  await revealTarget(tester, noteField);
   expect(tester.widget<TextField>(noteField).controller!.text, noteA);
   advance(const Duration(seconds: 20));
   await tapKey(tester, 'complete_session');
@@ -193,15 +185,10 @@ Future<void> _exerciseSessionEnding(
     hasLength(original.sessions.length + 1),
   );
   await tapKey(tester, 'nav_progress');
+  await revealTarget(tester, find.text('00:03:50'));
   expect(find.text('00:03:50'), findsOneWidget);
   final newestHistory = find.byKey(ValueKey('history_session_${secondA.id}'));
-  if (newestHistory.evaluate().isEmpty) {
-    await tester.scrollUntilVisible(
-      newestHistory,
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
-  }
+  await revealTarget(tester, newestHistory);
   expect(newestHistory, findsOneWidget);
   expect(
     find.descendant(of: newestHistory, matching: find.text(noteA)),

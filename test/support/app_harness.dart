@@ -25,8 +25,8 @@ Future<void> settleApp(WidgetTester tester) async {
   await tester.pumpAndSettle(const Duration(milliseconds: 50));
 }
 
-Future<void> tapKey(WidgetTester tester, String key) async {
-  final target = find.byKey(ValueKey<String>(key));
+/// Reveal lazy content without dragging a nested text editor or issuing taps.
+Future<void> revealTarget(WidgetTester tester, Finder target) async {
   if (target.evaluate().isEmpty) {
     // Drag the page's padding rather than a nested multiline text field.
     // The latter legitimately consumes vertical drags within the note editor.
@@ -47,7 +47,18 @@ Future<void> tapKey(WidgetTester tester, String key) async {
       }
     }
   }
-  expect(target, findsOneWidget, reason: 'Missing control: $key');
+  expect(target, findsOneWidget, reason: 'Missing target: $target');
+  await tester.ensureVisible(target);
+  await tester.pumpAndSettle(const Duration(milliseconds: 50));
+}
+
+/// Send one tap only after the target is ready; callers settle their own I/O.
+Future<void> tapTarget(
+  WidgetTester tester,
+  Finder target, {
+  required String description,
+}) async {
+  await revealTarget(tester, target);
   // A route snapshot can still cover a laid-out control after pumpAndSettle.
   // Require the real enabled target at a stable position in consecutive frames.
   var ready = false;
@@ -85,11 +96,15 @@ Future<void> tapKey(WidgetTester tester, String key) async {
     ready,
     isTrue,
     reason:
-        'Control $key did not become enabled and hit-testable within 5 seconds. '
+        'Control $description did not become enabled and hit-testable within 5 seconds. '
         'No tap was sent; check route transitions, overlays or keyboard insets.',
   );
   // Send exactly one tap; never retry a possibly mutating action.
   await tester.tap(target.hitTestable());
+}
+
+Future<void> tapKey(WidgetTester tester, String key) async {
+  await tapTarget(tester, find.byKey(ValueKey<String>(key)), description: key);
   await settleApp(tester);
 }
 
@@ -103,15 +118,7 @@ Future<void> fillField(WidgetTester tester, String key, String text) async {
   if (field.evaluate().isEmpty && optionsKey != null) {
     await tapKey(tester, optionsKey);
   }
-  if (field.evaluate().isEmpty) {
-    await tester.scrollUntilVisible(
-      field,
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
-  }
-  await tester.ensureVisible(field);
-  await tester.pumpAndSettle(const Duration(milliseconds: 50));
+  await revealTarget(tester, field);
   await tester.enterText(field, text);
   await settleApp(tester);
 }
@@ -135,6 +142,7 @@ Future<void> exerciseSessionFlow(
 
   await tester.pumpWidget(NextStepApp(repository: repository, clock: clock));
   await settleApp(tester);
+  await revealTarget(tester, find.text('Comece com um objetivo'));
   expect(find.text('Comece com um objetivo'), findsOneWidget);
 
   await tapKey(tester, 'nav_plan');
@@ -172,14 +180,11 @@ Future<void> exerciseSessionFlow(
   await tester.pumpWidget(NextStepApp(repository: repository, clock: clock));
   await settleApp(tester);
   await tapKey(tester, 'nav_session');
-  expect(
-    tester
-        .widget<TextField>(find.byKey(const ValueKey('session_note')))
-        .controller!
-        .text,
-    note,
-  );
+  await revealTarget(tester, find.text('00:01:15'));
   expect(find.text('00:01:15'), findsOneWidget);
+  final noteField = find.byKey(const ValueKey('session_note'));
+  await revealTarget(tester, noteField);
+  expect(tester.widget<TextField>(noteField).controller!.text, note);
 
   await tapKey(tester, 'resume_session');
   advance(const Duration(seconds: 45));
@@ -195,19 +200,15 @@ Future<void> exerciseSessionFlow(
   expect(completed.tasks.single.completed, isTrue);
 
   await tapKey(tester, 'nav_progress');
+  await revealTarget(tester, find.text('00:02:00'));
+  expect(find.text('00:02:00'), findsWidgets);
   // The history can be below the summary on a small Android viewport.
   final history = find.byKey(
     ValueKey('history_session_${completed.sessions.single.id}'),
   );
-  await tester.scrollUntilVisible(
-    history,
-    200,
-    scrollable: find.byType(Scrollable).first,
-  );
-  await tester.pumpAndSettle();
+  await revealTarget(tester, history);
   expect(history, findsOneWidget);
   expect(find.text('Consultar um domínio'), findsOneWidget);
   expect(find.text(note), findsOneWidget);
-  expect(find.text('00:02:00'), findsWidgets);
   expect(tester.takeException(), isNull);
 }
