@@ -4,8 +4,9 @@
 
 O fluxo e o adaptador Firebase estão implementados. **A conta ainda não foi
 ativada, por decisão do usuário; nenhuma chamada real ao Gemini foi validada.**
-O APK sem configuração informa que a IA está indisponível. O planejamento manual
-e as sessões continuam funcionando. Não existe resposta simulada no aplicativo
+O APK sem configuração informa que a IA está indisponível **antes de mostrar o
+formulário** e oferece a volta ao plano manual. O planejamento manual e as
+sessões continuam funcionando. Não existe resposta simulada no aplicativo
 normal. Geradores sintéticos existem somente nos testes e renders de revisão.
 
 Escolha: **Gemini 3.5 Flash-Lite**, pela **Gemini Developer API via Firebase AI
@@ -21,8 +22,10 @@ de disponibilidade futura. Não há troca automática para modelos pagos.
 ## Experiência no aplicativo
 
 1. Abra **Planejar com IA** em Hoje (plano vazio) ou Plano.
-2. Descreva por texto o que quer aprender. Personalize nível, 15–90 minutos por
-   dia, dias da semana, duração de 1–4 semanas e data inicial.
+2. Se a geração estiver configurada, descreva por texto o que quer aprender.
+   Personalize nível, 15–90 minutos por dia, dias da semana, duração de 1–4 semanas
+   e data inicial. Sem configuração, o app mostra o aviso e a opção **Voltar ao
+   plano manual**, sem pedir que preencha esses campos.
 3. Gere a proposta. O app informa que tema e preferências serão enviados ao
    Google; não envia as tarefas existentes, notas ou histórico.
 4. Revise temas, datas, atividades, 3–6 passos por tarefa e como verificar a
@@ -30,6 +33,13 @@ de disponibilidade futura. Não há troca automática para modelos pagos.
 5. **Adicionar ao meu plano → Confirmar e adicionar** cria o objetivo e todas as
    tarefas em uma transação. Cancelar ou descartar não cria tarefas.
 6. Os passos ficam disponíveis offline no Plano e durante a Sessão.
+
+A verificação inicial é local: não inicia Firebase nem faz uma chamada ao
+Gemini. Ter configuração não garante internet, cota ou autorização do serviço;
+essas falhas continuam sendo tratadas ao solicitar a geração. Se já houver uma
+proposta salva, ela continua disponível para revisão e confirmação local mesmo
+sem geração habilitada. O aviso de indisponibilidade não apaga o rascunho nem
+cria objetivos ou tarefas.
 
 O calendário é calculado no celular. A resposta da IA não escolhe IDs nem datas;
 precisa fornecer uma atividade por dia selecionado, dentro do tempo disponível.
@@ -44,9 +54,11 @@ aparece como dependência transitiva do SDK de IA, mas o NextStep não inicia um
 sessão de usuário. Não foram adicionados Firestore, Realtime Database, Storage,
 Analytics ou sincronização de planos.
 
-SQLite v2 mantém objetivos, tarefas detalhadas, notas, progresso e rascunho no
-dispositivo. A migração de v1 preserva os dados existentes. Desinstalar ou limpar
-os dados remove esse armazenamento; esta versão não inclui backup/exportação.
+SQLite v3 mantém objetivos, tarefas detalhadas, notas, progresso e rascunho no
+dispositivo. As migrações de v1/v2 preservam os dados existentes. Encerrar uma
+sessão salva seu tempo e nota mantendo a tarefa pendente; concluir a tarefa é
+uma ação separada. Desinstalar ou limpar os dados remove esse armazenamento;
+esta versão não inclui backup/exportação.
 
 **A geração exige internet.** O Google recebe o pedido e dados técnicos necessários
 à conexão/App Check. No nível gratuito, prompts e respostas podem ser utilizados

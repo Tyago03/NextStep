@@ -4,9 +4,9 @@ import 'package:material_ui/material_ui.dart';
 import 'package:nextstep/app.dart';
 import 'package:nextstep/application/ai_plan_controller.dart';
 import 'package:nextstep/application/app_controller.dart';
-import 'package:nextstep/application/study_plan_generator.dart';
 import 'package:nextstep/data/nextstep_repository.dart';
 import 'package:nextstep/domain/study_plan.dart';
+import 'package:nextstep/ui/screens.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'support/ai_fixture.dart';
@@ -79,17 +79,15 @@ void main() {
   });
 
   testWidgets(
-    'unconfigured AI explains availability without fabricated proposal',
+    'unconfigured AI explains availability before asking for a request',
     (tester) async {
       final repository = await openStore(tester);
-      final generator = FixtureStudyPlanGenerator(
-        response: (_) async => throw const AiPlanningFailure('aiNotConfigured'),
-      );
+      final generator = FixtureStudyPlanGenerator(isAvailable: false);
       await openScreen(tester, repository, generator);
-      await _enter(tester, 'ai_topic', 'Entender DNS');
-      expect(find.byKey(const ValueKey('ai_privacy')), findsOneWidget);
-      await _tapKey(tester, 'ai_generate');
-      expect(generator.calls, 1);
+      expect(generator.calls, 0);
+      expect(find.byKey(const ValueKey('ai_topic')), findsNothing);
+      expect(find.byKey(const ValueKey('ai_generate')), findsNothing);
+      expect(find.byKey(const ValueKey('ai_unavailable')), findsOneWidget);
       expect(
         find.text(
           'Planejamento com IA ainda não está disponível neste dispositivo. Seu plano manual continua funcionando.',
@@ -100,13 +98,34 @@ void main() {
       expect(find.byKey(const ValueKey('ai_confirm')), findsNothing);
       expect((await tester.runAsync(repository.loadPlanDraft)), isNull);
       expect((await tester.runAsync(repository.load))!.tasks, isEmpty);
+      await _tapKey(tester, 'ai_manual_plan');
+      expect(find.byType(PlanScreen), findsOneWidget);
+      expect(find.byType(TodayScreen), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'saved AI draft remains reviewable and importable while generation is unavailable',
+    (tester) async {
+      final repository = await openStore(tester);
+      final generator = FixtureStudyPlanGenerator(isAvailable: false);
+      final draft = aiFixtureProposal();
+      await tester.runAsync(() => repository.savePlanDraft(draft));
+      await openScreen(tester, repository, generator);
+      expect(find.byKey(const ValueKey('ai_unavailable')), findsOneWidget);
+      expect(find.byKey(const ValueKey('ai_topic')), findsNothing);
+      expect(generator.calls, 0);
+      expect((await tester.runAsync(repository.load))!.tasks, isEmpty);
+      await _tapKey(tester, 'ai_confirm');
+      expect((await tester.runAsync(repository.load))!.tasks, isEmpty);
+      await _tapKey(tester, 'confirm_ai_import');
       expect(
-        tester
-            .widget<TextFormField>(find.byKey(const ValueKey('ai_topic')))
-            .controller!
-            .text,
-        'Entender DNS',
+        (await tester.runAsync(repository.load))!.tasks.length,
+        draft.lessons.length,
       );
+      expect(generator.calls, 0);
+      expect(await tester.runAsync(repository.loadPlanDraft), isNull);
       expect(tester.takeException(), isNull);
     },
   );

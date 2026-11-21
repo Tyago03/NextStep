@@ -42,6 +42,7 @@ class _ControlledRepository implements NextStepRepository {
   bool failNextSave = false;
   bool failNextLoad = false;
   int pauses = 0;
+  int endings = 0;
 
   @override
   Future<AppSnapshot> load() async {
@@ -67,6 +68,12 @@ class _ControlledRepository implements NextStepRepository {
   Future<void> pauseSession(int sessionId, String note) async {
     pauses++;
     _replaceSession(note: note, status: SessionStatus.paused);
+  }
+
+  @override
+  Future<void> endSession(int sessionId, String note) async {
+    endings++;
+    _replaceSession(note: note, status: SessionStatus.ended);
   }
 
   @override
@@ -97,6 +104,9 @@ class _ControlledRepository implements NextStepRepository {
           goalTitle: session.goalTitle,
           status: nextStatus,
           startedAt: session.startedAt,
+          endedAt: nextStatus == SessionStatus.ended
+              ? session.startedAt
+              : session.endedAt,
           elapsedMs: session.elapsedMs,
           runningSince: nextStatus == SessionStatus.running
               ? session.runningSince
@@ -172,6 +182,38 @@ void main() {
         controller.hasUnsavedNote(state.snapshot!.activeSession!),
         isFalse,
       );
+    },
+  );
+
+  test(
+    'ending waits for queued notes and rejects a concurrent second ending',
+    () async {
+      repository.saveGate = Completer<void>();
+      controller.saveNote(1, 'Compare A');
+      controller.saveNote(1, 'Next: compare A and AAAA');
+      final ending = controller.run(
+        (store) => store.endSession(1, 'Next: compare A and AAAA'),
+      );
+      await _drainMicrotasks();
+      expect(repository.endings, 0);
+      expect(container.read(appControllerProvider).busy, isTrue);
+      expect(
+        await controller.run((store) => store.endSession(1, 'Late duplicate')),
+        isFalse,
+      );
+      repository.saveGate!.complete();
+      expect(await ending, isTrue);
+      final snapshot = container.read(appControllerProvider).snapshot!;
+      expect(repository.endings, 1);
+      expect(repository.writtenNotes, [
+        'Compare A',
+        'Next: compare A and AAAA',
+      ]);
+      expect(snapshot.activeSession, isNull);
+      expect(snapshot.sessions.single.status, SessionStatus.ended);
+      expect(snapshot.sessions.single.note, 'Next: compare A and AAAA');
+      expect(snapshot.tasks.single.completed, isFalse);
+      expect(controller.hasUnsavedNote(snapshot.sessions.single), isFalse);
     },
   );
 

@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -10,6 +12,16 @@ val flutterTarget = (project.findProperty("target") as? String)
     .orEmpty().replace('\\', '/')
 val integrationTarget = flutterTarget.contains("integration_test/") ||
     flutterTarget.contains("/build/test/listener_")
+
+val signingProperties = Properties()
+val signingPropertiesFile = rootProject.file("key.properties")
+if (signingPropertiesFile.exists()) {
+    signingPropertiesFile.inputStream().use { signingProperties.load(it) }
+}
+if (gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) } &&
+    !signingPropertiesFile.exists()) {
+    throw GradleException("Release signing is not configured. Run tool/prepare-signing.ps1 first.")
+}
 
 android {
     namespace = "dev.tyago.nextstep"
@@ -39,11 +51,20 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            if (signingPropertiesFile.exists()) {
+                storeFile = file(requireNotNull(signingProperties.getProperty("storeFile")))
+                storePassword = requireNotNull(signingProperties.getProperty("storePassword"))
+                keyAlias = requireNotNull(signingProperties.getProperty("keyAlias"))
+                keyPassword = requireNotNull(signingProperties.getProperty("keyPassword"))
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }

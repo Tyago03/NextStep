@@ -54,6 +54,11 @@ class FirebaseStudyPlanGenerator implements StudyPlanGenerator {
   final Duration timeout;
   Future<FirebaseAI>? _service;
 
+  @override
+  bool get isAvailable =>
+      responseLoader != null ||
+      (configuration.configured && Platform.isAndroid);
+
   static String _randomId() {
     final random = Random.secure();
     return List.generate(

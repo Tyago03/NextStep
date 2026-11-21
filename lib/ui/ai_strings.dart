@@ -117,6 +117,12 @@ class AiStrings {
     'dismiss': ['Entendi', 'Got it'],
     'reloadDraft': ['Tentar carregar rascunho', 'Try loading draft again'],
     'errorTitle': ['Não foi possível continuar', 'Could not continue'],
+    'unavailableTitle': ['IA ainda não configurada', 'AI is not set up yet'],
+    'manualPlan': ['Voltar ao plano manual', 'Back to manual planning'],
+    'savedDraftAvailable': [
+      'Seu rascunho salvo continua disponível para revisar e adicionar ao plano.',
+      'Your saved draft is still available to review and add to your plan.',
+    ],
     'aiNotConfigured': [
       'Planejamento com IA ainda não está disponível neste dispositivo. Seu plano manual continua funcionando.',
       'AI planning is not available on this device yet. Your manual plan still works.',

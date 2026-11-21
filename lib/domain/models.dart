@@ -50,7 +50,7 @@ class PlanTask {
   final String? completionCheck;
 }
 
-enum SessionStatus { running, paused, completed }
+enum SessionStatus { running, paused, ended, completed }
 
 class StudySession {
   const StudySession({
@@ -61,10 +61,11 @@ class StudySession {
     required this.status,
     required this.startedAt,
     this.completedAt,
+    DateTime? endedAt,
     required this.elapsedMs,
     this.runningSince,
     required this.note,
-  });
+  }) : endedAt = endedAt ?? completedAt;
 
   final int id;
   final int? taskId;
@@ -73,9 +74,18 @@ class StudySession {
   final SessionStatus status;
   final DateTime startedAt;
   final DateTime? completedAt;
+
+  /// When the session finished, whether or not its task was completed.
+  final DateTime? endedAt;
   final int elapsedMs;
   final DateTime? runningSince;
   final String note;
+
+  bool get isActive =>
+      status == SessionStatus.running || status == SessionStatus.paused;
+
+  bool get isFinished =>
+      status == SessionStatus.ended || status == SessionStatus.completed;
 
   /// A display timer can refresh this value without mutating persistent state.
   /// Running sessions keep counting across app closure; paused ones do not.
@@ -110,7 +120,7 @@ class AppSnapshot {
 
   StudySession? get activeSession {
     for (final session in sessions) {
-      if (session.status != SessionStatus.completed) return session;
+      if (session.isActive) return session;
     }
     return null;
   }

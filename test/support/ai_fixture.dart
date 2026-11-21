@@ -48,7 +48,10 @@ StudyPlanProposal aiFixtureProposal({
 
 /// Explicit test double: no authentication, network or live AI inference.
 class FixtureStudyPlanGenerator implements StudyPlanGenerator {
-  FixtureStudyPlanGenerator({this.response});
+  FixtureStudyPlanGenerator({this.response, this.isAvailable = true});
+
+  @override
+  final bool isAvailable;
 
   Future<StudyPlanProposal> Function(StudyPlanRequest request)? response;
   final requests = <StudyPlanRequest>[];

@@ -21,9 +21,9 @@ class _AiPlanButton extends StatelessWidget {
   Widget build(BuildContext context) => OutlinedButton.icon(
     key: const ValueKey('open_ai_plan'),
     onPressed: () async {
-      final imported = await Navigator.of(context)
+      final result = await Navigator.of(context)
           .push<bool>(MaterialPageRoute(builder: (_) => const AIPlanScreen()));
-      if (context.mounted && imported == true) onNavigate(1);
+      if (context.mounted && result != null) onNavigate(1);
     },
     icon: const Icon(Icons.auto_awesome_outlined),
     label: Text(s('planWithAi')),
@@ -672,6 +672,32 @@ class _SessionDetailState extends ConsumerState<_SessionDetail> {
     super.dispose();
   }
 
+  Future<void> _endForNow(StudySession session, Strings s) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(s('endSessionTitle')),
+        content: SingleChildScrollView(child: Text(s('endSessionBody'))),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(s('cancel')),
+          ),
+          FilledButton(
+            key: const ValueKey('confirm_end_session'),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(s('endSession')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final saved = await ref
+        .read(appControllerProvider.notifier)
+        .run((repository) => repository.endSession(session.id, _note.text));
+    if (saved) widget.onNavigate(3);
+  }
+
   @override
   Widget build(BuildContext context) {
     final view = ref.watch(appControllerProvider);
@@ -683,6 +709,21 @@ class _SessionDetailState extends ConsumerState<_SessionDetail> {
         .where((task) => task.id == session.taskId)
         .firstOrNull;
     final unsavedNote = controller.hasUnsavedNote(session);
+    final earlierSessions =
+        view.snapshot!.sessions
+            .where(
+              (previous) =>
+                  previous.id < session.id &&
+                  previous.taskId == session.taskId &&
+                  previous.status == SessionStatus.ended,
+            )
+            .toList()
+          ..sort((a, b) => b.id.compareTo(a.id));
+    final previousNote = earlierSessions.firstOrNull?.note;
+    final hasCarriedNote =
+        previousNote != null &&
+        previousNote.isNotEmpty &&
+        _note.text == previousNote;
     final colors = Theme.of(context).colorScheme;
     final completeButton = OutlinedButton.icon(
       key: const ValueKey('complete_session'),
@@ -770,6 +811,12 @@ class _SessionDetailState extends ConsumerState<_SessionDetail> {
                     ),
                     label: Text(s(running ? 'pause' : 'resume')),
                   ),
+                  OutlinedButton.icon(
+                    key: const ValueKey('end_session'),
+                    onPressed: view.busy ? null : () => _endForNow(session, s),
+                    icon: const Icon(Icons.stop_circle_outlined),
+                    label: Text(s('endSession')),
+                  ),
                   completeButton,
                 ],
               ),
@@ -784,6 +831,15 @@ class _SessionDetailState extends ConsumerState<_SessionDetail> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (hasCarriedNote) ...[
+                Text(
+                  s('carriedNote'),
+                  key: const ValueKey('previous_note_hint'),
+                  style: Theme.of(context).textTheme.bodyMedium
+                      ?.copyWith(color: colors.onSurfaceVariant),
+                ),
+                const SizedBox(height: 14),
+              ],
               TextField(
                 key: const ValueKey('session_note'),
                 controller: _note,
@@ -867,10 +923,14 @@ class ProgressScreen extends ConsumerWidget {
     final data = ref.watch(appControllerProvider).snapshot!;
     final s = Strings(data.languageCode);
     final sessions =
-        data.sessions
-            .where((session) => session.status == SessionStatus.completed)
-            .toList()
-          ..sort((a, b) => b.completedAt!.compareTo(a.completedAt!));
+        data.sessions.where((session) => session.isFinished).toList()
+          ..sort((a, b) {
+            final byDate = b.endedAt!.compareTo(a.endedAt!);
+            return byDate == 0 ? b.id.compareTo(a.id) : byDate;
+          });
+    final completedTasks = sessions
+        .where((session) => session.status == SessionStatus.completed)
+        .length;
     final elapsed = Duration(
       milliseconds: sessions.fold<int>(
         0,
@@ -889,6 +949,10 @@ class ProgressScreen extends ConsumerWidget {
               _Metric(
                 label: s('sessionsDone'),
                 value: sessions.length.toString(),
+              ),
+              _Metric(
+                label: s('tasksCompleted'),
+                value: completedTasks.toString(),
               ),
             ],
           ),
@@ -921,8 +985,33 @@ class ProgressScreen extends ConsumerWidget {
                 const SizedBox(height: 6),
                 Text(session.goalTitle),
                 const SizedBox(height: 12),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      session.status == SessionStatus.completed
+                          ? Icons.check_circle_outline_rounded
+                          : Icons.pause_circle_outline_rounded,
+                      size: 20,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        s(
+                          session.status == SessionStatus.completed
+                              ? 'taskDone'
+                              : 'taskPending',
+                        ),
+                        key: ValueKey('history_outcome_${session.id}'),
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
                 Text(
-                  '${formatElapsed(Duration(milliseconds: session.elapsedMs))} • ${MaterialLocalizations.of(context).formatMediumDate(session.completedAt!.toLocal())}',
+                  '${formatElapsed(Duration(milliseconds: session.elapsedMs))} • ${MaterialLocalizations.of(context).formatMediumDate(session.endedAt!.toLocal())}',
                 ),
                 if (session.note.isNotEmpty) ...[
                   const SizedBox(height: 16),

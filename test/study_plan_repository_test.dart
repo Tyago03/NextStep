@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -72,7 +73,7 @@ void main() {
     () async {
       await repository.close();
       path = '${directory.path}/legacy-v1.db';
-      await _createV1Database(path, now);
+      await _createLegacyDatabase(path, now);
       await openRepository();
       var snapshot = await repository.load();
       expect(snapshot.goals.single.id, 7);
@@ -87,6 +88,11 @@ void main() {
       expect(snapshot.activeSession!.status, SessionStatus.paused);
       expect(snapshot.activeSession!.note, 'Próximo passo: comparar respostas');
       expect(snapshot.activeSession!.elapsedMs, 90000);
+      expect(snapshot.activeSession!.endedAt, isNull);
+      final legacyCompleted = snapshot.sessions.singleWhere(
+        (session) => session.id == 8,
+      );
+      expect(legacyCompleted.endedAt, legacyCompleted.completedAt);
       expect(
         snapshot.sessions.singleWhere((session) => session.id == 8).note,
         'Contexto concluído preservado',
@@ -113,9 +119,200 @@ void main() {
       );
       expect((await repository.loadPlanDraft())!.id, 'proposal-one');
       final database = await databaseFactoryFfi.openDatabase(path);
-      expect(await database.getVersion(), 2);
+      expect(await database.getVersion(), 3);
     },
   );
+
+  for (final status in ['running', 'paused']) {
+    test(
+      'v2 migration preserves $status context, AI data and session sequence',
+      () async {
+        await repository.close();
+        path = '${directory.path}/legacy-v2-$status.db';
+        await _createLegacyDatabase(
+          path,
+          now,
+          version: 2,
+          activeStatus: status,
+        );
+        await openRepository();
+        final snapshot = await repository.load();
+        expect(snapshot.activeSession!.id, 9);
+        expect(snapshot.activeSession!.status.name, status);
+        expect(snapshot.activeSession!.elapsedMs, 90000);
+        expect(
+          snapshot.activeSession!.note,
+          'Próximo passo: comparar respostas',
+        );
+        expect(snapshot.activeSession!.endedAt, isNull);
+        expect(snapshot.activeSession!.completedAt, isNull);
+        expect(snapshot.goals.single.id, 7);
+        expect(
+          snapshot.goals.single.description,
+          'Resumo preservado da versão 2',
+        );
+        final task = snapshot.tasks.singleWhere((task) => task.id == 11);
+        expect(task.topic, 'DNS');
+        expect(task.steps, ['Ler', 'Consultar', 'Comparar']);
+        expect(task.scheduledDate, DateTime(2026, 1, 5));
+        expect(task.completionCheck, 'Explicar os registros.');
+        expect(task.url, 'https://example.com/dns');
+        expect(snapshot.languageCode, 'en');
+        expect(snapshot.availableMinutes, 45);
+        expect(
+          (await repository.loadPlanDraft())!.toJson(),
+          _proposal(id: 'draft-v2').toJson(),
+        );
+        final legacyCompleted = snapshot.sessions.singleWhere(
+          (session) => session.id == 8,
+        );
+        expect(legacyCompleted.endedAt, legacyCompleted.completedAt);
+        expect(legacyCompleted.elapsedMs, 60000);
+        final detached = snapshot.sessions.singleWhere(
+          (session) => session.id == 10,
+        );
+        expect(detached.taskId, isNull);
+        expect(detached.taskTitle, 'Tarefa antiga apagada');
+        expect(detached.note, 'Histórico sem tarefa preservado');
+
+        final database = await databaseFactoryFfi.openDatabase(path);
+        expect(await database.getVersion(), 3);
+        expect(await database.rawQuery('PRAGMA foreign_key_check'), isEmpty);
+        expect(await database.rawQuery('PRAGMA foreign_keys'), [
+          {'foreign_keys': 1},
+        ]);
+        expect(
+          await database.rawQuery(
+            "SELECT seq FROM sqlite_sequence WHERE name = 'sessions'",
+          ),
+          [
+            {'seq': 42},
+          ],
+        );
+        expect(
+          await database.rawQuery(
+            "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'sessions_task'",
+          ),
+          hasLength(1),
+        );
+        final activeRow = (await database.query(
+          'sessions',
+          where: 'id = 9',
+        )).single;
+        final duplicate = Map<String, Object?>.from(activeRow)..remove('id');
+        await expectLater(
+          database.insert('sessions', duplicate),
+          throwsA(isA<DatabaseException>()),
+        );
+        for (final changes in <Map<String, Object?>>[
+          {'active_slot': null},
+          {'ended_at': now.millisecondsSinceEpoch},
+          {'status': 'ended'},
+        ]) {
+          await expectLater(
+            database.update('sessions', changes, where: 'id = 9'),
+            throwsA(isA<DatabaseException>()),
+          );
+        }
+
+        await repository.importPlanProposal(
+          _proposal(id: 'already-imported-v2'),
+        );
+        expect(
+          (await repository.load()).goals,
+          hasLength(1),
+          reason: 'Migration must preserve accepted-plan deduplication.',
+        );
+        expect((await repository.loadPlanDraft())!.id, 'draft-v2');
+        await repository.endSession(9, 'Continuar depois da atualização');
+        final ended = (await repository.load()).sessions.singleWhere(
+          (session) => session.id == 9,
+        );
+        expect(ended.elapsedMs, status == 'running' ? 120000 : 90000);
+        expect(ended.completedAt, isNull);
+        expect(ended.endedAt, now);
+        for (final changes in <Map<String, Object?>>[
+          {'active_slot': 1},
+          {'ended_at': null},
+          {'running_since': now.millisecondsSinceEpoch},
+          {'completed_at': now.millisecondsSinceEpoch},
+        ]) {
+          await expectLater(
+            database.update('sessions', changes, where: 'id = 9'),
+            throwsA(isA<DatabaseException>()),
+          );
+        }
+        await repository.startSession(11);
+        expect((await repository.load()).activeSession!.id, 43);
+        expect(
+          (await repository.load()).activeSession!.note,
+          'Continuar depois da atualização',
+        );
+        await repository.close();
+        await openRepository();
+        expect((await repository.load()).activeSession!.id, 43);
+        expect((await repository.loadPlanDraft())!.id, 'draft-v2');
+      },
+    );
+  }
+
+  test(
+    'v2 migration preserves deleted high IDs even when no sessions survive',
+    () async {
+      await repository.close();
+      path = '${directory.path}/legacy-v2-empty-sessions.db';
+      await _createLegacyDatabase(path, now, version: 2);
+      final legacy = await databaseFactoryFfi.openDatabase(path);
+      await legacy.delete('sessions');
+      await legacy.close();
+      await openRepository();
+      expect((await repository.load()).sessions, isEmpty);
+      await repository.startSession(11);
+      expect((await repository.load()).activeSession!.id, 43);
+    },
+  );
+
+  test('failed v2 migration leaves the original schema, version and data intact', () async {
+    await repository.close();
+    path = '${directory.path}/legacy-v2-invalid-row.db';
+    await _createLegacyDatabase(path, now, version: 2);
+    final legacy = await databaseFactoryFfi.openDatabase(path);
+    // Simulate a corrupted legacy row. The migration must fail without silently
+    // deleting history or guessing which active session should survive.
+    await legacy.execute('PRAGMA ignore_check_constraints = ON');
+    await legacy.update('sessions', {'active_slot': null}, where: 'id = 9');
+    await legacy.execute('PRAGMA ignore_check_constraints = OFF');
+    final before = await legacy.query('sessions', orderBy: 'id');
+    await legacy.close();
+    await expectLater(openRepository(), throwsA(isA<DatabaseException>()));
+    final unchanged = await databaseFactoryFfi.openDatabase(path);
+    expect(await unchanged.getVersion(), 2);
+    expect(await unchanged.query('sessions', orderBy: 'id'), before);
+    expect(
+      (await unchanged.rawQuery('PRAGMA table_info(sessions)'))
+          .any((column) => column['name'] == 'ended_at'),
+      isFalse,
+    );
+    expect(
+      await unchanged.rawQuery(
+        "SELECT name FROM sqlite_master WHERE name = 'sessions_v3'",
+      ),
+      isEmpty,
+    );
+    expect(
+      await unchanged.rawQuery(
+        "SELECT seq FROM sqlite_sequence WHERE name = 'sessions'",
+      ),
+      [
+        {'seq': 42},
+      ],
+    );
+    expect(
+      (await unchanged.query('plan_draft')).single['proposal_id'],
+      'draft-v2',
+    );
+    await unchanged.close();
+  });
 
   test(
     'saving and discarding a durable draft never creates objectives or tasks',
@@ -291,13 +488,18 @@ void main() {
   );
 }
 
-/// Real version-1 schema and data, not a version-2 database with its version
-/// number changed. This fixture exercises SQLite's onUpgrade transaction.
-Future<void> _createV1Database(String path, DateTime now) async {
+/// Actual legacy schemas, without any v3 columns or constraints. This fixture
+/// exercises SQLite's onUpgrade transaction instead of changing a version flag.
+Future<void> _createLegacyDatabase(
+  String path,
+  DateTime now, {
+  int version = 1,
+  String activeStatus = 'paused',
+}) async {
   final database = await databaseFactoryFfi.openDatabase(
     path,
     options: OpenDatabaseOptions(
-      version: 1,
+      version: version,
       onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
       onCreate: (db, version) async {
         await db.execute('''
@@ -384,11 +586,14 @@ Future<void> _createV1Database(String path, DateTime now) async {
           'task_id': 11,
           'task_title': 'Comparar respostas',
           'goal_title': 'Redes',
-          'status': 'paused',
+          'status': activeStatus,
           'started_at': now
               .subtract(const Duration(minutes: 5))
               .millisecondsSinceEpoch,
           'elapsed_ms': 90000,
+          'running_since': activeStatus == 'running'
+              ? now.subtract(const Duration(seconds: 30)).millisecondsSinceEpoch
+              : null,
           'note': 'Próximo passo: comparar respostas',
           'active_slot': 1,
         });
@@ -397,6 +602,67 @@ Future<void> _createV1Database(String path, DateTime now) async {
           'available_minutes': 45,
           'language_code': 'en',
         });
+        if (version == 2) {
+          await db.execute(
+            "ALTER TABLE goals ADD COLUMN description TEXT NOT NULL DEFAULT ''",
+          );
+          await db.execute('ALTER TABLE tasks ADD COLUMN topic TEXT');
+          await db.execute('ALTER TABLE tasks ADD COLUMN scheduled_date TEXT');
+          await db.execute(
+            "ALTER TABLE tasks ADD COLUMN steps_json TEXT NOT NULL DEFAULT '[]'",
+          );
+          await db.execute(
+            'ALTER TABLE tasks ADD COLUMN completion_check TEXT',
+          );
+          await db.execute('''
+            CREATE TABLE plan_draft (
+              id INTEGER PRIMARY KEY CHECK(id = 1),
+              proposal_id TEXT NOT NULL,
+              payload TEXT NOT NULL
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE plan_imports (
+              proposal_id TEXT PRIMARY KEY NOT NULL,
+              imported_at INTEGER NOT NULL
+            )
+          ''');
+          await db.update('goals', {
+            'description': 'Resumo preservado da versão 2',
+          }, where: 'id = 7');
+          await db.update('tasks', {
+            'topic': 'DNS',
+            'scheduled_date': '2026-01-05',
+            'steps_json': jsonEncode(['Ler', 'Consultar', 'Comparar']),
+            'completion_check': 'Explicar os registros.',
+          }, where: 'id = 11');
+          await db.insert('plan_draft', {
+            'id': 1,
+            'proposal_id': 'draft-v2',
+            'payload': jsonEncode(_proposal(id: 'draft-v2').toJson()),
+          });
+          await db.insert('plan_imports', {
+            'proposal_id': 'already-imported-v2',
+            'imported_at': now.millisecondsSinceEpoch,
+          });
+          final detached = <String, Object?>{
+            'id': 10,
+            'task_title': 'Tarefa antiga apagada',
+            'goal_title': 'Objetivo antigo apagado',
+            'status': 'completed',
+            'started_at': now
+                .subtract(const Duration(days: 1))
+                .millisecondsSinceEpoch,
+            'completed_at': now
+                .subtract(const Duration(hours: 23))
+                .millisecondsSinceEpoch,
+            'elapsed_ms': 180000,
+            'note': 'Histórico sem tarefa preservado',
+          };
+          await db.insert('sessions', detached);
+          await db.insert('sessions', {...detached, 'id': 42});
+          await db.delete('sessions', where: 'id = 42');
+        }
       },
     ),
   );

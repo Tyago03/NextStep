@@ -164,6 +164,7 @@ class _AIPlanScreenState extends ConsumerState<AIPlanScreen> {
   Widget build(BuildContext context) {
     final app = ref.watch(appControllerProvider);
     final state = ref.watch(aiPlanControllerProvider);
+    final available = ref.watch(aiGeneratorProvider).isAvailable;
     final s = AiStrings(app.snapshot?.languageCode ?? 'pt');
     final proposal = state.proposal;
     return Scaffold(
@@ -189,6 +190,12 @@ class _AIPlanScreenState extends ConsumerState<AIPlanScreen> {
                     key: const ValueKey('ai_content'),
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
                     children: [
+                      if (!available)
+                        _AiUnavailable(
+                          s: s,
+                          hasDraft: proposal != null,
+                          onManual: () => Navigator.pop(context, false),
+                        ),
                       if (state.errorCode != null)
                         _AiError(
                           s: s,
@@ -205,9 +212,9 @@ class _AIPlanScreenState extends ConsumerState<AIPlanScreen> {
                                     .reloadDraft
                               : null,
                         ),
-                      if (proposal == null)
+                      if (proposal == null && available)
                         _requestForm(s, disabled: state.busy)
-                      else
+                      else if (proposal != null)
                         ..._preview(proposal, s, saving: state.saving),
                     ],
                   ),
@@ -619,6 +626,55 @@ class _LessonCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _AiUnavailable extends StatelessWidget {
+  const _AiUnavailable({
+    required this.s,
+    required this.hasDraft,
+    required this.onManual,
+  });
+  final AiStrings s;
+  final bool hasDraft;
+  final VoidCallback onManual;
+
+  @override
+  Widget build(BuildContext context) => Card(
+    key: const ValueKey('ai_unavailable'),
+    color: Theme.of(context).colorScheme.primaryContainer,
+    child: Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.info_outline_rounded,
+            color: Theme.of(context).colorScheme.primary,
+            size: 28,
+          ),
+          const SizedBox(height: 14),
+          Text(
+            s('unavailableTitle'),
+            style: Theme.of(context).textTheme.titleLarge
+                ?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 10),
+          Text(s('aiNotConfigured')),
+          if (hasDraft) ...[
+            const SizedBox(height: 12),
+            Text(s('savedDraftAvailable')),
+          ] else ...[
+            const SizedBox(height: 20),
+            OutlinedButton(
+              key: const ValueKey('ai_manual_plan'),
+              onPressed: onManual,
+              child: Text(s('manualPlan')),
+            ),
+          ],
+        ],
+      ),
+    ),
+  );
 }
 
 class _AiWaiting extends StatelessWidget {

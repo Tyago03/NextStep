@@ -526,7 +526,7 @@ void main() {
     expect((await readStore(tester, repository)).tasks, hasLength(1));
     expect(
       find.text(
-        'Conclua a sessão atual antes de iniciar outra ou excluir seu objetivo ou tarefa.',
+        'Encerre a sessão atual antes de iniciar outra ou excluir seu objetivo ou tarefa.',
       ),
       findsOneWidget,
     );

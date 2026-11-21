@@ -23,7 +23,7 @@ class NextStepRepository {
     final db = await selectedFactory.openDatabase(
       databasePath,
       options: OpenDatabaseOptions(
-        version: 2,
+        version: 3,
         onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
         onCreate: (db, version) async {
           await db.execute('''
@@ -44,26 +44,7 @@ class NextStepRepository {
               completed INTEGER NOT NULL DEFAULT 0 CHECK(completed IN (0, 1))
             )
           ''');
-          await db.execute('''
-            CREATE TABLE sessions (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL,
-              task_title TEXT NOT NULL,
-              goal_title TEXT NOT NULL,
-              status TEXT NOT NULL CHECK(status IN ('running','paused','completed')),
-              started_at INTEGER NOT NULL,
-              completed_at INTEGER,
-              elapsed_ms INTEGER NOT NULL CHECK(elapsed_ms >= 0),
-              running_since INTEGER,
-              note TEXT NOT NULL DEFAULT '' CHECK(length(note) <= 2000),
-              active_slot INTEGER UNIQUE,
-              CHECK(
-                (status = 'running' AND running_since IS NOT NULL AND completed_at IS NULL AND active_slot IS 1)
-                OR (status = 'paused' AND running_since IS NULL AND completed_at IS NULL AND active_slot IS 1)
-                OR (status = 'completed' AND running_since IS NULL AND completed_at IS NOT NULL AND active_slot IS NULL)
-              )
-            )
-          ''');
+          await _createSessionsTable(db, 'sessions');
           await db.execute('''
             CREATE TABLE preferences (
               id INTEGER PRIMARY KEY CHECK(id = 1),
@@ -82,6 +63,7 @@ class NextStepRepository {
         },
         onUpgrade: (db, oldVersion, newVersion) async {
           if (oldVersion < 2) await _upgradeToV2(db);
+          if (oldVersion < 3) await _upgradeToV3(db);
         },
       ),
     );
@@ -224,6 +206,14 @@ class NextStepRepository {
     final task = await _requiredRow(txn, 'tasks', taskId);
     if (task['completed'] == 1) throw const DomainException('completed');
     final goal = await _requiredRow(txn, 'goals', task['goal_id']! as int);
+    final previous = await txn.query(
+      'sessions',
+      columns: ['note'],
+      where: 'task_id = ? AND status = ?',
+      whereArgs: [taskId, SessionStatus.ended.name],
+      orderBy: 'id DESC',
+      limit: 1,
+    );
     final now = _nowMs();
     await txn.insert('sessions', {
       'task_id': taskId,
@@ -232,9 +222,10 @@ class NextStepRepository {
       'status': SessionStatus.running.name,
       'started_at': now,
       'completed_at': null,
+      'ended_at': null,
       'elapsed_ms': 0,
       'running_since': now,
-      'note': '',
+      'note': previous.isEmpty ? '' : previous.single['note'],
       'active_slot': 1,
     });
   });
@@ -245,9 +236,7 @@ class NextStepRepository {
       final session = _sessionFromRow(
         await _requiredRow(txn, 'sessions', sessionId),
       );
-      if (session.status == SessionStatus.completed) {
-        throw const DomainException('completed');
-      }
+      _requireActive(session);
       await txn.update(
         'sessions',
         {
@@ -266,9 +255,7 @@ class NextStepRepository {
     final session = _sessionFromRow(
       await _requiredRow(txn, 'sessions', sessionId),
     );
-    if (session.status == SessionStatus.completed) {
-      throw const DomainException('completed');
-    }
+    _requireActive(session);
     if (session.status == SessionStatus.running) return;
     await txn.update(
       'sessions',
@@ -278,21 +265,39 @@ class NextStepRepository {
     );
   });
 
-  Future<void> completeSession(int sessionId, String note) async {
+  /// Finishes this attempt while keeping its task available to study again.
+  Future<void> endSession(int sessionId, String note) =>
+      _finishSession(sessionId, note, completeTask: false);
+
+  Future<void> completeSession(int sessionId, String note) =>
+      _finishSession(sessionId, note, completeTask: true);
+
+  Future<void> _finishSession(
+    int sessionId,
+    String note, {
+    required bool completeTask,
+  }) async {
     final cleanNote = _note(note);
     await _db.transaction((txn) async {
       final session = _sessionFromRow(
         await _requiredRow(txn, 'sessions', sessionId),
       );
-      if (session.status == SessionStatus.completed) return;
+      if (completeTask && session.status == SessionStatus.ended) {
+        throw const DomainException('sessionEnded');
+      }
+      if (session.isFinished) return;
       final now = _clock().toUtc();
+      final endedAt = now.isBefore(session.startedAt)
+          ? session.startedAt.millisecondsSinceEpoch
+          : now.millisecondsSinceEpoch;
       await txn.update(
         'sessions',
         {
-          'status': SessionStatus.completed.name,
-          'completed_at': now.isBefore(session.startedAt)
-              ? session.startedAt.millisecondsSinceEpoch
-              : now.millisecondsSinceEpoch,
+          'status': completeTask
+              ? SessionStatus.completed.name
+              : SessionStatus.ended.name,
+          'completed_at': completeTask ? endedAt : null,
+          'ended_at': endedAt,
           'elapsed_ms': session.elapsedAt(now).inMilliseconds,
           'running_since': null,
           'note': cleanNote,
@@ -301,22 +306,24 @@ class NextStepRepository {
         where: 'id = ?',
         whereArgs: [sessionId],
       );
-      await txn.update(
-        'tasks',
-        {'completed': 1},
-        where: 'id = ?',
-        whereArgs: [session.taskId],
-      );
+      if (completeTask) {
+        await txn.update(
+          'tasks',
+          {'completed': 1},
+          where: 'id = ?',
+          whereArgs: [session.taskId],
+        );
+      }
     });
   }
 
   Future<void> saveNote(int sessionId, String note) async {
     final cleanNote = _note(note);
     await _db.transaction((txn) async {
-      final session = await _requiredRow(txn, 'sessions', sessionId);
-      if (session['status'] == SessionStatus.completed.name) {
-        throw const DomainException('completed');
-      }
+      final session = _sessionFromRow(
+        await _requiredRow(txn, 'sessions', sessionId),
+      );
+      _requireActive(session);
       await txn.update(
         'sessions',
         {'note': cleanNote},
@@ -437,6 +444,76 @@ class NextStepRepository {
     ''');
   }
 
+  static Future<void> _createSessionsTable(DatabaseExecutor db, String table) =>
+      db.execute('''
+    CREATE TABLE $table (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL,
+      task_title TEXT NOT NULL,
+      goal_title TEXT NOT NULL,
+      status TEXT NOT NULL CHECK(status IN ('running','paused','ended','completed')),
+      started_at INTEGER NOT NULL,
+      completed_at INTEGER,
+      ended_at INTEGER,
+      elapsed_ms INTEGER NOT NULL CHECK(elapsed_ms >= 0),
+      running_since INTEGER,
+      note TEXT NOT NULL DEFAULT '' CHECK(length(note) <= 2000),
+      active_slot INTEGER UNIQUE,
+      CHECK(
+        (status = 'running' AND running_since IS NOT NULL AND completed_at IS NULL AND ended_at IS NULL AND active_slot IS 1)
+        OR (status = 'paused' AND running_since IS NULL AND completed_at IS NULL AND ended_at IS NULL AND active_slot IS 1)
+        OR (status = 'ended' AND running_since IS NULL AND completed_at IS NULL AND ended_at IS NOT NULL AND active_slot IS NULL)
+        OR (status = 'completed' AND running_since IS NULL AND completed_at IS NOT NULL AND ended_at IS NOT NULL AND ended_at = completed_at AND active_slot IS NULL)
+      )
+    )
+  ''');
+
+  /// SQLite cannot alter a CHECK constraint. onUpgrade already wraps this
+  /// rebuild in a transaction, so any failed copy preserves the old database.
+  static Future<void> _upgradeToV3(DatabaseExecutor db) async {
+    final oldSequence = Sqflite.firstIntValue(
+      await db.rawQuery(
+        "SELECT seq FROM sqlite_sequence WHERE name = 'sessions'",
+      ),
+    );
+    await _createSessionsTable(db, 'sessions_v3');
+    await db.execute('''
+      INSERT INTO sessions_v3 (
+        id, task_id, task_title, goal_title, status, started_at, completed_at,
+        ended_at, elapsed_ms, running_since, note, active_slot
+      )
+      SELECT id, task_id, task_title, goal_title, status, started_at, completed_at,
+        completed_at, elapsed_ms, running_since, note, active_slot
+      FROM sessions
+    ''');
+    await db.execute('DROP TABLE sessions');
+    await db.execute('ALTER TABLE sessions_v3 RENAME TO sessions');
+    await db.execute('CREATE INDEX sessions_task ON sessions(task_id)');
+    // Explicit IDs preserve surviving rows; also preserve deleted high IDs so
+    // an old reference can never identify a newly created session after upgrade.
+    if (oldSequence != null) {
+      final updated = await db.rawUpdate(
+        "UPDATE sqlite_sequence SET seq = MAX(seq, ?) WHERE name = 'sessions'",
+        [oldSequence],
+      );
+      if (updated == 0) {
+        await db.insert('sqlite_sequence', {
+          'name': 'sessions',
+          'seq': oldSequence,
+        });
+      }
+    }
+  }
+
+  static void _requireActive(StudySession session) {
+    if (session.status == SessionStatus.ended) {
+      throw const DomainException('sessionEnded');
+    }
+    if (session.status == SessionStatus.completed) {
+      throw const DomainException('completed');
+    }
+  }
+
   int _nowMs() => _clock().toUtc().millisecondsSinceEpoch;
 
   static Future<Map<String, Object?>> _requiredRow(
@@ -522,6 +599,7 @@ class NextStepRepository {
     completedAt: row['completed_at'] == null
         ? null
         : _date(row['completed_at']! as int),
+    endedAt: row['ended_at'] == null ? null : _date(row['ended_at']! as int),
     elapsedMs: row['elapsed_ms']! as int,
     runningSince: row['running_since'] == null
         ? null
