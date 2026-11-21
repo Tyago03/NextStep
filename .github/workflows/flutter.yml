@@ -34,6 +34,15 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+      - name: Reserve space for the Android emulator
+        if: runner.os == 'Linux' && runner.environment == 'github-hosted'
+        shell: bash
+        run: |
+          df -h /
+          # Only unused SDKs on this disposable GitHub-hosted runner.
+          # Keep Android, Java, Flutter, Gradle and the workspace intact.
+          sudo rm -rf -- /usr/share/dotnet /usr/share/swift /usr/local/.ghcup
+          df -h /
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
@@ -54,10 +63,22 @@ jobs:
           api-level: 36
           arch: x86_64
           target: google_apis
+          disk-size: 4096M
           disable-animations: true
+          pre-emulator-launch-script: df -h /
           script: |
             flutter test integration_test/ai_planning_test.dart -d emulator-5554 --no-uninstall --reporter expanded
             flutter test integration_test/session_flow_test.dart -d emulator-5554 --no-uninstall --reporter expanded
             flutter test integration_test/process_restart_test.dart -d emulator-5554 --no-uninstall --dart-define=NEXTSTEP_RESTART_PHASE=seed --reporter expanded
             adb -s emulator-5554 shell am force-stop dev.tyago.nextstep.integration
             flutter test integration_test/process_restart_test.dart -d emulator-5554 --no-uninstall --dart-define=NEXTSTEP_RESTART_PHASE=verify --reporter expanded
+      - name: Diagnose disk space after a failure
+        if: failure() && runner.os == 'Linux'
+        shell: bash
+        run: |
+          df -h /
+          for directory in "$ANDROID_HOME" "$HOME/.android/avd" "$GITHUB_WORKSPACE/build" "$HOME/.gradle"; do
+            if [[ -d "$directory" ]]; then
+              du -sh "$directory"
+            fi
+          done
