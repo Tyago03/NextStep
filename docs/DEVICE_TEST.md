@@ -1,22 +1,22 @@
 # Teste em celular Android físico — NextStep 0.3.0
 
-**Resultado geral: aprovação manual informada por Tyago. Rastreabilidade detalhada a complementar.**
+**Resultado geral: aceite funcional relatado em 21/11/2026, com rastreabilidade parcial.**
 
 ## Aceite informado pelo responsável
 
-Registro de 21/11/2026: Tyago Vitorino Ferreira informou que instalou o aplicativo
-no próprio celular Android, que o funcionamento estava correto e que aprovava os
-testes propostos. Este registro incorpora seu relato; não representa nova execução
+O responsável informou que instalou o aplicativo no próprio celular Android,
+que o funcionamento estava correto e que aprovava os testes propostos.
+Este registro incorpora seu relato; não representa nova execução
 automatizada, observação independente ou certificação de compatibilidade universal.
 
 Não foram fornecidos modelo do aparelho, versão do Android, hash do arquivo
 instalado, medições individuais, capturas ou resultados por etapa. Esses campos
-continuam em aberto. Não preencher valores presumidos nem marcar casos específicos
-como verificados apenas a partir da aprovação geral.
+continuam em aberto. A aprovação geral não estabelece os resultados de cada etapa.
 
-A referência de distribuição é o release **0.3.0+3**. A identificação do arquivo
-efetivamente instalado pode ser acrescentada quando confirmada. Os resultados de
-emulador em [VALIDATION.md](VALIDATION.md) são evidências distintas.
+A referência de [distribuição](DISTRIBUTION.md) é o release **0.3.0+3**.
+A identificação do arquivo efetivamente instalado pode ser acrescentada quando
+confirmada. Os resultados de emulador em [VALIDATION.md](VALIDATION.md) são
+evidências distintas.
 
 ## Aparelho e APK
 
@@ -43,7 +43,7 @@ Ainda não há backup ou exportação.
 
 O roteiro abaixo foi fornecido para a validação. As células vazias significam
 **resultado individual não registrado**, não aprovação automática nem afirmação de
-que o teste não foi executado. Preencha com observações reais quando disponíveis.
+que o teste não foi executado.
 
 | # | Ação e resultado esperado | Observado / evidência | Resultado |
 | --- | --- | --- | --- |
@@ -95,5 +95,5 @@ bugs em cenários não descritos ou em outros aparelhos.
 
 Aceite funcional informado pelo responsável em 21/11/2026. Quantidade de etapas
 executadas, medições e identificação completa do aparelho permanecem não informadas.
-Não extrapolar esse relato para TalkBack, múltiplos modelos de celular, publicação
-em loja ou funcionamento do Gemini real.
+O relato não estabelece validação de TalkBack, múltiplos modelos de celular,
+publicação em loja ou funcionamento do Gemini real.

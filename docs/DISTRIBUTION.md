@@ -1,22 +1,19 @@
 # Distribution — 0.3.0
 
-**Status: [Release v0.3.0](https://github.com/Tyago03/NextStep/releases/tag/v0.3.0)
-is published in the private repository with Tyago's approval.** GitHub sign-in
-and repository access are required to view or download its assets. This does not
-make the repository or downloads public, and there is no store listing.
-Version stays **0.3.0+3**.
+**[Release v0.3.0](https://github.com/Tyago03/NextStep/releases/tag/v0.3.0)
+is publicly available.** Source code, APK and demonstration video can be accessed
+without sign-in. There is no store listing. Application version: **0.3.0+3**.
 
-On 21 November 2026, Tyago reported successful manual testing on his Android
-phone and approved the proposed tests. Model, Android version, installed-file
-hash and per-case evidence were not supplied. See [DEVICE_TEST.md](DEVICE_TEST.md)
-for the reported acceptance and remaining traceability fields. This is not an
-independently observed or multi-device validation result.
+The maintainer reported successful manual testing on an Android phone on
+21 November 2026. Device model, Android version, installed-file hash and per-case
+measurements remain to be recorded in [DEVICE_TEST.md](DEVICE_TEST.md).
+This acceptance report does not establish multi-device compatibility.
 
 ## Release identity
 
 | Field | Verified value |
 | --- | --- |
-| APK | `dist/NextStep-0.3.0-release.apk` |
+| APK | `NextStep-0.3.0-release.apk` |
 | Version / code | 0.3.0 / 3 |
 | Production source commit | `7592ce3507f5185f2470e5c0b7831cfe457ad484` |
 | Application ID | `dev.tyago.nextstep` (normal app) |
@@ -41,24 +38,22 @@ Do not substitute an integration or debug APK.
 ## Release files
 
 Release **NextStep 0.3.0** uses tag `v0.3.0`, targeting checkpoint `5cbef4e`.
-Download its assets with an account authorized to access the private repository:
+Download its assets without signing in:
 
 - [Signed APK](https://github.com/Tyago03/NextStep/releases/download/v0.3.0/NextStep-0.3.0-release.apk)
 - [APK SHA-256](https://github.com/Tyago03/NextStep/releases/download/v0.3.0/NextStep-0.3.0-release.apk.sha256)
 - [Verification record](https://github.com/Tyago03/NextStep/releases/download/v0.3.0/VERIFICATION.json)
 - [Demonstration video](https://github.com/Tyago03/NextStep/releases/download/v0.3.0/NextStep-0.3.0-demo.mp4)
 
-The verification record identifies the source and validation commits,
-clean-checkout result and corresponding Actions run. Local APKs and notices remain
-in the ignored `dist/release-preparation/` folder. Publication notes,
-verification metadata and the download receipt are in `dist/release-publication/`.
-Release assets are historical records of that checkpoint; the manual acceptance
-reported afterwards is recorded separately in `DEVICE_TEST.md`.
+`VERIFICATION.json` is the original publication snapshot from 21 November 2026,
+preserved unchanged. It identifies the source and validation commits,
+clean-checkout result and corresponding Actions run. The repository and downloads
+are now public; current phone acceptance is recorded separately in
+[DEVICE_TEST.md](DEVICE_TEST.md).
 
-Video: `dist/demo/NextStep-0.3.0-demo.mp4`, 2:30, English captions, no audio.
+Video: `NextStep-0.3.0-demo.mp4`, 2:30, English captions, no audio.
 SHA-256: `e6794fa06bf9c683cdfc6bce37a80fc97a6abca219280a2a6301f5198325f71b`.
-Screenshots in `docs/images/` show the same release with synthetic study data.
-The release assets are separate from a source clone. See [presentation](PORTFOLIO.md).
+The [screenshots and demo](PORTFOLIO.md) show the same release with synthetic study data.
 
 ## Installation and signing
 
@@ -80,18 +75,8 @@ builds need no release key or Firebase configuration; see the [README](../README
 The local release rebuild on 21 November 2026 produced the same SHA-256 as this
 release. That observation is limited to this build environment.
 
-## Visibility and licenses
+## Licenses and limits
 
-Publishing this release did not change repository visibility. The maintainer's
-manual phone acceptance does not establish compatibility beyond the reported test.
-Review files, release assets and repository history before changing public access.
-Automated secret checks reduce risk but cannot certify that a repository
-contains no sensitive data.
-Removed work notes and local-machine paths remain in older commits. Removing a
-file from the current tree does not remove its earlier versions. No history
-rewrite or new full-history security audit was performed in this documentation update.
-
-Third-party notices embedded in the APK are preserved. No license for the
-project's own source has been selected; do not imply a new open-source license
-or remove dependency notices. Live Firebase/Gemini remains inactive, and no
-backup, login or synchronization is included.
+No project-level source license has been selected. Third-party notices embedded
+in the APK are preserved. Live Firebase/Gemini remains inactive, and no backup,
+login or synchronization is included.

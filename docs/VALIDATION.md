@@ -2,8 +2,8 @@
 
 ## Distribution preparation — 21 November 2026
 
-Version remains **0.3.0+3**. This round changes documentation and release
-preparation only; application code, dependencies, schema and tests are unchanged.
+Version **0.3.0+3**. This checkpoint covered documentation and release
+preparation; application code, dependencies, schema and tests remained unchanged.
 The following checks were rerun against the existing application and test tree:
 
 | Check | Observed result |
@@ -23,7 +23,9 @@ source and validation commits, build results, clean-checkout verification and
 GitHub Actions run. It is delivered with the APK, outside the code tree.
 [Distribution details](DISTRIBUTION.md) identify the signed candidate;
 [GitHub Actions](https://github.com/Tyago03/NextStep/actions) reports remote runs.
-Physical testing remains [pending](DEVICE_TEST.md).
+[Physical-device acceptance](DEVICE_TEST.md) was reported on 21 November 2026.
+Device/APK identification and individual test evidence remain unrecorded; that
+manual report is separate from the automated results above.
 
 The records below preserve earlier results; their test counts and limitations
 apply to their own checkpoints, not automatically to later versions.
@@ -91,7 +93,7 @@ screenshots. Reproduction and findings are in [QA_ROUND_2.md](QA_ROUND_2.md).
 | --- | --- |
 | `flutter build apk --debug` | Passed; normal app copied to `dist/NextStep-debug.apk` before integration builds. |
 | Normal Android application install and launch | Passed: `adb install -r` returned Success; `am start -W` returned Status ok; process and top resumed activity confirmed; `nextstep.db` exists. |
-| Interactive visual inspection | Not performed at this checkpoint: permission to access the emulator window was denied. |
+| Interactive visual inspection | Not performed at this checkpoint. |
 | Development widget render review | Seven final images inspected after typography, hierarchy, spacing, and palette refinements; not a manual device test. |
 | `integration_test/session_flow_test.dart` on Android | Passed, 1/1, in the isolated integration package. |
 | `integration_test/process_restart_test.dart` across two Android processes | Both seed and verify passed, 1/1 each, with an explicit force-stop between executions and retained SQLite data. |
@@ -123,8 +125,6 @@ virtualization settings.
   checkout resolved it; no existing repository was reconfigured.
 - `avdmanager` emitted a `devices.xml` warning but created the dedicated device.
   Successful emulator boot was separately verified using `sys.boot_completed=1`.
-- Permission to access the emulator window was denied; interactive visual
-  inspection was not performed at this checkpoint.
 - The first process-restart verification could not find its seed database.
   Flutter's default test deployment uninstalled the seed app before installing
   the verification target. The revised procedure requests a separate
@@ -186,9 +186,6 @@ and the normal application's distinct ID were verified from the APK and device.
 debug APK build and Android integration. **GitHub Actions had not run at this
 checkpoint**; versioning was local Git. Later remote results and release signing
 are recorded in [REVISION_2026_11_20.md](REVISION_2026_11_20.md).
-
-No remote push, store listing, production rollout or external human review was
-part of this checkpoint.
 
 ## Other platforms and limitations
 

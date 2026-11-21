@@ -4,6 +4,8 @@ Executada localmente em **19/11/2026**, no Windows, com Flutter 3.50.0 / Dart
 3.14.0 e emulador Android API 36. Registro histórico da **v0.2.0**, posterior ao
 [MVP](VALIDATION.md) e à [segunda rodada de QA](QA_ROUND_2.md). Resultados da
 v0.3.0 estão em [REVISION_2026_11_20.md](REVISION_2026_11_20.md).
+A [distribuição atual](DISTRIBUTION.md) e o [aceite relatado em celular
+físico](DEVICE_TEST.md) têm registros separados.
 
 **Firebase não foi ativado e não houve chamada real ao Gemini.** As propostas
 usam fixtures explícitas: os testes validam fluxo e contrato de dados, sem medir
@@ -42,7 +44,7 @@ Os 71 testes locais incluem os 35 testes anteriores e 36 adicionais:
   descarte, falhas de geração/armazenamento, tentativas concorrentes, descarte
   do escopo do app e restauração do rascunho sem chamada de rede.
 - **4 do adaptador:** validação da resposta, IDs/datas locais, resposta inválida,
-  timeout, erros e indisponibilidade honesta quando não há configuração.
+  timeout, erros e indisponibilidade quando não há configuração.
 - **6 de interface:** entrada e preferências, confirmação/cancelamento/descarte,
   ordem cronológica mesmo quando um tema reaparece, português/inglês, largura de
   320 pixels e texto ampliado em 2x.
@@ -66,8 +68,8 @@ app e ausência de cortes visíveis nessas imagens. Os fixtures estão identific
 como conteúdo de teste.
 
 São renders de widgets Flutter. A inspeção interativa do emulador não foi
-realizada nesta rodada devido ao bloqueio de acesso. Não houve teste com
-usuários, aparelho físico, teclado nativo, TalkBack ou medição de desempenho.
+realizada nesta rodada. Não houve teste com usuários, aparelho físico, teclado
+nativo, TalkBack ou medição de desempenho.
 
 ## Artefato entregue
 

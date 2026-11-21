@@ -2,6 +2,8 @@
 
 Registro histórico do MVP. Resultados posteriores, incluindo CI e demonstração
 da versão 0.3.0, estão em [REVISION_2026_11_20.md](REVISION_2026_11_20.md).
+A [distribuição atual](DISTRIBUTION.md) e o [aceite relatado em celular
+físico](DEVICE_TEST.md) têm registros separados.
 
 ## Resultado verificado
 
@@ -9,7 +11,7 @@ da versão 0.3.0, estão em [REVISION_2026_11_20.md](REVISION_2026_11_20.md).
 | --- | --- | --- |
 | Funcionalidade | Recuperação após gravação confirmada e falha de atualização, sem duplicação; notas preservadas e novas alterações bloqueadas até recarregar. | Testes de banco, controller, interface e reinício Android; resultados abaixo. |
 | Usabilidade | Tempos rápidos 5/15/25/45; controles de tempo só quando úteis; pausa, retomada e conclusão junto ao cronômetro; salvamento automático com repetição após falha. | Testes de edição, exclusão, preferências, recuperação e fluxo completo; telas/formulários em 320 px, fonte 200% e teclado simulado. |
-| Clareza | Ordem automática ao criar; ordem/link em Mais opções; atalho para outra tarefa; orientação correta quando já existe objetivo sem tarefas. | Fluxos e textos conferidos por código, testes e imagens dos widgets. Ainda não houve teste de compreensão com uma pessoa. |
+| Clareza | Ordem automática ao criar; ordem/link em Mais opções; atalho para outra tarefa; orientação correta quando já existe objetivo sem tarefas. | Fluxos e textos conferidos por código, testes e imagens dos widgets. Sem estudo de compreensão com usuários neste checkpoint. |
 | Estética | Títulos curtos, verde suave, hierarquia das ações, espaçamento consistente e tempos rápidos alinhados. | Sete renders de widgets inspecionados; não são capturas do emulador. |
 
 ## Problemas encontrados e resolvidos
@@ -68,9 +70,8 @@ inseridos no banco do aplicativo normal. O script não captura a área de trabal
 
 ## Limites desta rodada
 
-O acesso à janela do emulador estava bloqueado por permissão. Não houve inspeção
-interativa, avaliação do teclado nativo ou leitor de tela nesta rodada; os
-testes Android e os renders foram executados separadamente.
+Não houve inspeção interativa, avaliação do teclado nativo ou leitor de tela
+nesta rodada; os testes Android e os renders foram executados separadamente.
 
 Não foram avaliados compreensão por usuários, desempenho em aparelho físico ou
 build de produção. Um teste de usabilidade deve observar a descoberta das ações

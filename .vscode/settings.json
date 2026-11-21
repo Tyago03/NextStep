@@ -1,5 +1,4 @@
 {
-  "dart.flutterSdkPath": "../.nextstep-tools/flutter",
   "[dart]": {
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "Dart-Code.dart-code"

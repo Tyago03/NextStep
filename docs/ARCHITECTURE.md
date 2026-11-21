@@ -87,4 +87,5 @@ normal `dev.tyago.nextstep` package. All four stages use `--no-uninstall`; a
 force-stop between the restart phases checks persisted state without clearing
 it. Host tests also cover narrow screens and enlarged PT/EN text; they do not
 replace physical-device or accessibility testing. See [validation](VALIDATION.md)
-and the pending [device test form](DEVICE_TEST.md).
+and the [reported physical-device acceptance](DEVICE_TEST.md), whose device/APK
+identification and individual test evidence remain unrecorded.

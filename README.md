@@ -33,15 +33,15 @@ Signed-release captures from an Android API 36 emulator, using example study dat
 </p>
 
 [Download the 2:30 demo](https://github.com/Tyago03/NextStep/releases/download/v0.3.0/NextStep-0.3.0-demo.mp4)
-with English captions and identified cuts. GitHub sign-in and access to the
-private repository are required. [Presentation details](docs/PORTFOLIO.md).
+with English captions and identified cuts.
+[Presentation details](docs/PORTFOLIO.md).
 
 ## APK installation
 
 [Download the signed APK](https://github.com/Tyago03/NextStep/releases/download/v0.3.0/NextStep-0.3.0-release.apk)
 (52.6 MiB) from [Release v0.3.0](https://github.com/Tyago03/NextStep/releases/tag/v0.3.0).
-The release currently requires access to the private repository.
-The maintainer reported successful manual testing on his Android phone on
+The source code, APK and demo are public and available without sign-in.
+The maintainer reported successful manual testing on an Android phone on
 **21 November 2026**. Device details and per-case measurements have not yet been
 recorded; see [the device test record](docs/DEVICE_TEST.md).
 
@@ -56,7 +56,7 @@ and [distribution details](docs/DISTRIBUTION.md). There is no Play Store listing
 
 Prerequisites: **Flutter 3.50.0/Dart 3.14**, JDK 21, Android SDK 36 and an authorized
 Android device or emulator. Add Flutter to `PATH`. Manual planning needs no Firebase
-configuration. Repository access is currently required to clone:
+configuration. Clone the public repository:
 
 ```sh
 git clone https://github.com/Tyago03/NextStep.git

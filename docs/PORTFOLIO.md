@@ -1,4 +1,4 @@
-# NextStep — project presentation
+# NextStep — project overview
 
 NextStep helps turn a study goal into a small action and preserve the next step
 after an interruption. Plans, notes and sessions stay on the Android device,
@@ -26,17 +26,16 @@ represent actual study habits or measured outcomes.
 
 ## Artifacts and availability
 
-| Artifact | Verified local file | Status |
-| --- | --- | --- |
-| [Signed Android release](https://github.com/Tyago03/NextStep/releases/download/v0.3.0/NextStep-0.3.0-release.apk) | `dist/NextStep-0.3.0-release.apk` | 55,127,375 bytes; signature checked and installed on the emulator. |
-| [Demonstration video](https://github.com/Tyago03/NextStep/releases/download/v0.3.0/NextStep-0.3.0-demo.mp4) | `dist/demo/NextStep-0.3.0-demo.mp4` | 2:30, 3,450,160 bytes; English captions, no audio. |
-| Real screenshots | `docs/images/nextstep-0.3-*.png` | Included in the repository. |
+| Artifact | Details |
+| --- | --- |
+| [Signed Android release](https://github.com/Tyago03/NextStep/releases/download/v0.3.0/NextStep-0.3.0-release.apk) | 55,127,375 bytes; signature checked and installed on the emulator. |
+| [Demonstration video](https://github.com/Tyago03/NextStep/releases/download/v0.3.0/NextStep-0.3.0-demo.mp4) | 2:30, 3,450,160 bytes; English captions, no audio. |
+| [Real screenshots](images/) | Captures of the installed release with example data. |
 
 The APK and video are available as assets of
 [Release v0.3.0](https://github.com/Tyago03/NextStep/releases/tag/v0.3.0).
-The repository remains private: GitHub sign-in and repository access are required
-to view or download them. There is no public access or store listing. Local
-copies remain outside the source tree. The release also includes the
+Source code and release assets are public and available without sign-in.
+There is no store listing. The release also includes the
 [APK checksum](https://github.com/Tyago03/NextStep/releases/download/v0.3.0/NextStep-0.3.0-release.apk.sha256)
 and [verification record](https://github.com/Tyago03/NextStep/releases/download/v0.3.0/VERIFICATION.json).
 
@@ -50,8 +49,11 @@ evidence, not a physical-phone test.
 Flutter, Riverpod and SQLite provide the interface, application state and local
 persistence. Transactions preserve notes and elapsed time during session changes;
 schema migrations retain earlier records. The verified checkpoint passed 92 host
-tests and four Android integration stages. Physical-device, TalkBack, real-user
-and live Gemini validation remain outstanding. Backup/export is not implemented.
+tests and four Android integration stages. On 21 November 2026, the maintainer
+reported successful manual testing on an Android phone. Device metadata and
+per-case measurements remain to be recorded in [the device test record](DEVICE_TEST.md).
+TalkBack, multi-device compatibility and live Gemini remain unvalidated.
+Backup/export is not implemented.
 
 ## Author
 
