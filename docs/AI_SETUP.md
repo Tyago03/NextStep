@@ -72,7 +72,7 @@ completion checks, time limits, quota and network failures, recovery, and explic
 confirmation before imports. Fixture tests validate local behavior, not provider
 quality. Keep the privacy notice accurate for the selected provider and plan.
 
-Official configuration references, checked 21 November 2026:
+Official configuration references:
 [Flutter setup](https://firebase.google.com/docs/ai-logic/get-started?platform=flutter),
 [App Check](https://firebase.google.com/docs/ai-logic/app-check).
 Historical fixture results remain in [AI_VALIDATION.md](AI_VALIDATION.md).

@@ -1,4 +1,35 @@
-# MVP validation — 19 November 2026
+# Validation records
+
+## Distribution preparation — 21 November 2026
+
+Version remains **0.3.0+3**. This round changes documentation and release
+preparation only; application code, dependencies, schema and tests are unchanged.
+The following checks were rerun against the existing application and test tree:
+
+| Check | Observed result |
+| --- | --- |
+| Formatting | 30 Dart files; no changes required. |
+| Static analysis | No issues found. |
+| Host suite | 92 tests passed. |
+| Android integration | All four stages passed: AI fixture, session flow, restart seed and verification after force-stop. |
+| Release build | Succeeded; rebuilt APK SHA-256 matches the preserved 0.3.0 candidate byte for byte. |
+
+Android commands retained `--no-uninstall` and the isolated
+`dev.tyago.nextstep.integration` package. Host/integration logs are kept in the
+ignored `local-validation/` directory. Fixture results do not establish live AI.
+
+The release preparation's accompanying `VERIFICATION.json` records the exact
+source and validation commits, build results, clean-checkout verification and
+GitHub Actions run. It is delivered with the APK, outside the code tree.
+[Distribution details](DISTRIBUTION.md) identify the signed candidate;
+[GitHub Actions](https://github.com/Tyago03/NextStep/actions) reports remote runs.
+Physical testing remains [pending](DEVICE_TEST.md).
+
+The records below preserve earlier results; their test counts and limitations
+apply to their own checkpoints, not automatically to later versions.
+
+---
+## Original MVP validation — 19 November 2026
 
 Historical checkpoint of the original MVP, recorded on **19 November 2026**.
 These results apply to that version. Later records cover
