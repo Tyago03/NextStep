@@ -32,21 +32,24 @@ Actual signed-release captures from an Android API 36 emulator, using example st
   <img src="docs/images/nextstep-0.3-progress.png" width="220" alt="Three finished sessions and one completed task">
 </p>
 
-The 2:30 demo is available locally at `dist/demo/NextStep-0.3.0-demo.mp4`.
-It has English captions and identified cuts. It is excluded from Git and has no
-published viewing URL. [Presentation details](docs/PORTFOLIO.md).
+[Download the 2:30 demo](https://github.com/Tyago03/NextStep/releases/download/v0.3.0/NextStep-0.3.0-demo.mp4)
+with English captions and identified cuts. GitHub sign-in and access to the
+private repository are required. [Presentation details](docs/PORTFOLIO.md).
 
 ## APK installation
 
-The signed release is stored locally at `dist/NextStep-0.3.0-release.apk`
-(52.6 MiB). It was installed and demonstrated on the emulator; it is not included
-in a clone or published for download.
+[Download the signed APK](https://github.com/Tyago03/NextStep/releases/download/v0.3.0/NextStep-0.3.0-release.apk)
+(52.6 MiB) from [Release v0.3.0](https://github.com/Tyago03/NextStep/releases/tag/v0.3.0).
+The release requires access to the private repository; it is not publicly accessible.
+The APK was installed and demonstrated on the emulator. Physical-device validation is pending.
 
-If you receive this APK, open it on **Android 7.0/API 24 or later** and approve
+Open the downloaded APK on **Android 7.0/API 24 or later** and approve
 installation for the app opening the file. Its release certificate differs from
 debug builds: use a separate device/emulator to preserve existing debug data.
-ARM64, ARMv7 and x86_64 libraries are included. Verify the checksum in
-[distribution details](docs/DISTRIBUTION.md) and record phone results in
+ARM64, ARMv7 and x86_64 libraries are included. Check the
+[SHA-256 file](https://github.com/Tyago03/NextStep/releases/download/v0.3.0/NextStep-0.3.0-release.apk.sha256)
+and [verification record](https://github.com/Tyago03/NextStep/releases/download/v0.3.0/VERIFICATION.json).
+See [distribution details](docs/DISTRIBUTION.md) and record phone results in
 [the device checklist](docs/DEVICE_TEST.md). There is no Play Store listing.
 
 ## Run from source

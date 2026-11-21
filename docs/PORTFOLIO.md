@@ -28,13 +28,17 @@ represent actual study habits or measured outcomes.
 
 | Artifact | Verified local file | Status |
 | --- | --- | --- |
-| Signed Android release | `dist/NextStep-0.3.0-release.apk` | 55,127,375 bytes; signature checked and installed on the emulator. |
-| Demonstration video | `dist/demo/NextStep-0.3.0-demo.mp4` | 2:30, 3,450,160 bytes; English captions, no audio. |
+| [Signed Android release](https://github.com/Tyago03/NextStep/releases/download/v0.3.0/NextStep-0.3.0-release.apk) | `dist/NextStep-0.3.0-release.apk` | 55,127,375 bytes; signature checked and installed on the emulator. |
+| [Demonstration video](https://github.com/Tyago03/NextStep/releases/download/v0.3.0/NextStep-0.3.0-demo.mp4) | `dist/demo/NextStep-0.3.0-demo.mp4` | 2:30, 3,450,160 bytes; English captions, no audio. |
 | Real screenshots | `docs/images/nextstep-0.3-*.png` | Included in the repository. |
 
-The APK and video remain local and are excluded from Git. There is no public
-download or viewing URL and no store listing. The repository is currently
-private. Receiving repository access does not provide these local artifacts.
+The APK and video are available as assets of
+[Release v0.3.0](https://github.com/Tyago03/NextStep/releases/tag/v0.3.0).
+The repository remains private: GitHub sign-in and repository access are required
+to view or download them. There is no public access or store listing. Local
+copies remain outside the source tree. The release also includes the
+[APK checksum](https://github.com/Tyago03/NextStep/releases/download/v0.3.0/NextStep-0.3.0-release.apk.sha256)
+and [verification record](https://github.com/Tyago03/NextStep/releases/download/v0.3.0/VERIFICATION.json).
 
 The video identifies cuts and its final held frame. Retained footage runs at
 normal speed; captured notes and timer values are unchanged. Reopening after
