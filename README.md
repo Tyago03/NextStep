@@ -1,12 +1,40 @@
 # NextStep
 
-A small Flutter app that stores study plans on the device and preserves context
-after an interruption. Optional online AI proposes detailed plans for review.
+NextStep helps with a personal problem: starting a study session and remembering
+where to continue after an interruption. Turn a goal into small tasks, choose
+one that fits the time available, and save a concrete next step. Plans, notes
+and session history stay on the Android device, without an account.
 
-**Version 0.2.0:** Gemini/Firebase integration is prepared, but the developer
-account is deliberately not activated yet. The delivered unconfigured build
-does not generate live AI plans or substitute fake answers. Manual planning
-works normally. See [AI setup](docs/AI_SETUP.md) and [AI validation](docs/AI_VALIDATION.md).
+**Version 0.3.0:** pause an open session, **finish for now** while keeping its task
+pending, or explicitly **complete the task**. Starting that task again creates a
+new session with the previous next-step note and a fresh timer. History separates
+finished sessions from completed tasks.
+
+Tyago defined the personal problem, product scope and review priorities. Codex
+assisted with implementation, tests, documentation and code review. This is a
+small working project, not a claim of production users or measured study gains.
+
+The [presentation guide](docs/PORTFOLIO.md) explains the Android demo, authorship
+and distribution limits. The [revision checkpoint](docs/REVISION_2026_11_20.md)
+records executed validation. Installation details follow below.
+
+Real captures of the signed **0.3.0** release on an Android API 36 emulator,
+using synthetic DNS study data:
+
+<p>
+  <img src="docs/images/nextstep-0.3-plan.png" width="220" alt="Manual plan with two pending DNS tasks">
+  <img src="docs/images/nextstep-0.3-new-session.png" width="220" alt="New session with the previous next-step note and a fresh timer">
+  <img src="docs/images/nextstep-0.3-progress.png" width="220" alt="Progress showing three finished sessions and one completed task">
+</p>
+
+The release APK was built, signature-checked and installed separately from the
+existing debug app. Its measured size is **55,127,375 bytes** (52.6 MiB). The APK
+and recorded demo are local artifacts; they have not been published for download.
+
+Optional Gemini/Firebase integration is prepared but **not activated or tested
+against the live provider**. Unconfigured builds explain this before showing a
+request form. Saved proposals remain reviewable offline; tasks are imported
+only after confirmation. See [AI setup](docs/AI_SETUP.md).
 
 The [editable project briefing](NextStep_Briefing_Atualizado.md) records the
 current scope and explains how to review future changes supplied by Tyago.
@@ -25,8 +53,8 @@ with a 15-minute estimate, start a session, then pause with the note
 | --- | --- |
 | Today | Choose quick or custom minutes, see an unfinished task that fits, choose another task, or return to the current session. |
 | Plan | Create, edit, and delete goals and tasks; new items append automatically, with priority order and reference links under More options. |
-| Session | Start, pause, resume, and complete a task and its session; save a next-step note. |
-| Progress | See completed sessions, their actual recorded time, title snapshots, and notes. |
+| Session | Start, pause, resume, finish for now, or complete the task; save and recover the next-step note. |
+| Progress | See finished sessions, their recorded time, title snapshots, notes and whether the task was completed at that session's end. |
 | AI planning | Describe a topic and routine, review a dated proposal with steps and completion checks, then explicitly confirm before any tasks are created. |
 
 The interface supports Portuguese and English, empty plans, narrow screens, and
@@ -38,38 +66,35 @@ open the device's external browser only when selected.
 
 **Time policy:** a running session continues counting when the app is closed.
 Pause explicitly to stop the clock. Reopening a paused session keeps its elapsed
-time unchanged. **Complete task and session** finishes both in one transaction.
-At most one session can remain unfinished.
+time unchanged. **Finish for now** closes the session and keeps the task pending;
+**Complete task** finishes both in one transaction. At most one session can be
+running or paused. Starting another session never adds its predecessor's time
+again; each historical interval is counted once.
 
-## Earlier QA checkpoint
+## Validation and design decisions
 
-On **19 November 2026**, formatting and static analysis passed on Windows, and
-all **35 repository, controller, and widget tests passed**. These include real
-SQLite file reopening, the complete UI flow, queued note writes, failed saves,
-duplicate-save prevention after a failed refresh, and 320-pixel layouts with 2x
-text scaling and simulated keyboard insets.
+The initial remote Android run could not boot its emulator because the runner
+ran out of disk space. A correction limited to the disposable GitHub runner
+freed unused SDKs and set a bounded AVD data partition. Both jobs and all four
+Android stages passed at commit `cfb4d977` in
+[run 44851876321](https://github.com/Tyago03/NextStep/actions/runs/44851876321).
+The **0.3.0 code and test checkpoint** is `cd62f281`: both jobs passed in
+[run 44862109558](https://github.com/Tyago03/NextStep/actions/runs/44862109558),
+with **92 host tests and all four Android stages**, including process restart.
+The [revision record](docs/REVISION_2026_11_20.md) includes migration coverage,
+subsequent test fixes and signed-release evidence. The documentation commit
+following that checkpoint changes no application or test code.
 
-The Android debug build passed; the normal application APK is preserved at
-`dist/NextStep-debug.apk`. The Android core-flow test passed (1/1), and both
-process-restart phases passed after an explicit force-stop between executions.
-APK metadata and installed-package checks confirmed the separate
-`dev.tyago.nextstep.integration` test sandbox. The verified runner preserves its
-data between phases using `--no-uninstall`.
-The normal APK was installed and launched on the emulator, and its local database
-was verified. Desktop visual inspection remains blocked by Computer Use's
-emulator permission; automated Android UI tests are recorded separately.
-Seven development widget renders were visually reviewed after the UI polish.
-These are rendered app widgets with test fixtures, not emulator screenshots or
-human usability testing. See [the second QA round](docs/QA_ROUND_2.md).
+SQLite transactions keep final time, note and session state consistent. Schema
+migrations preserve old records; a persistent proposal ID prevents duplicate AI
+imports. Riverpod separates screen state from storage. `sqflite` was chosen over
+Drift to keep this small app free of a database code-generation pipeline.
 
-See [the validation record](docs/VALIDATION.md) for commands, scope, and outstanding
-checks. At that checkpoint, the GitHub Actions workflow had not run and Git
-versioning was local. The repository is now hosted privately on GitHub; consult
-its Actions tab for remote checks. No public release or store publication is claimed.
-
-The newer AI implementation and its additional tests are documented in
-[AI_VALIDATION.md](docs/AI_VALIDATION.md). The counts above describe the earlier
-QA checkpoint, not the current suite.
+Earlier records remain available: [original validation](docs/VALIDATION.md),
+[UI review](docs/QA_ROUND_2.md) and [AI preparation](docs/AI_VALIDATION.md).
+Automated tests and an emulator demonstration do not replace physical-device,
+TalkBack or real-user validation. There is no store publication or public demo
+link until Tyago explicitly approves sharing.
 
 ## Run on the prepared Windows machine
 
@@ -177,6 +202,21 @@ APK at `dist/NextStep-debug.apk` or rebuild the normal target before installing 
 user-facing copy. Android integration requires a running emulator or authorized
 device; it is separate from `flutter test`.
 
+To prepare a signed release APK locally:
+
+```powershell
+.\tool\prepare-signing.ps1
+.\tool\build-distribution.ps1
+```
+
+The signing script creates a dedicated key only when neither signing file exists.
+Keep `../.nextstep-tools/signing/nextstep-release.jks` and `android/key.properties`
+private and back them up together for future updates. Both stay outside Git.
+Release builds do not fall back to a debug certificate. The builder verifies the
+signature, records SHA-256 and places the APK in `dist`. Nothing is uploaded.
+Use a separate emulator for release testing: its certificate differs from the
+existing debug installation, whose data must not be cleared to replace it.
+
 `tool/verify-android.ps1` runs AI planning with explicit test fixtures, the core
 session flow, and the seed/verify restart phases,
 with an explicit force-stop between phases. Its verified integration application
@@ -211,8 +251,8 @@ and retain completed session history.
   manifest sets `allowBackup="false"`; the app implements no cloud backup.
   Uninstalling it or clearing its data can remove the local plan and history.
 - Completed tasks cannot be reopened as new sessions in this version. Create a
-  new task for another study action. There is no session cancellation or history
-  deletion workflow.
+  new task for another study action. A task left pending by Finish for now can
+  start a new session. Discarding sessions and deleting history are not implemented.
 - Web, iOS, and a Windows desktop application have not been validated. Running
   tests on a Windows host does not establish Windows desktop app support.
 - Store signing/publication, Android home-screen widgets, export/import, real

@@ -1,9 +1,9 @@
 # NextStep — briefing do projeto e próximas revisões
 
 - **Responsável:** Tyago Vitorino Ferreira
-- **Registro de referência:** 19/11/2026
-- **Versão do aplicativo neste registro:** 0.2.0+2
-- **Código de referência:** branch `codex/mvp`, commit `bd8d403`.
+- **Registro de referência:** 21/11/2026 (revisão recebida em 20/11)
+- **Versão do aplicativo neste registro:** 0.3.0+3
+- **Código de referência:** branch `codex/mvp`, aplicação `7592ce3`, testes `cd62f28`.
 
 ## 1. Como interpretar o reenvio deste briefing
 
@@ -79,23 +79,26 @@ posterior de planejamento com IA. A exigência de não ter login permanece.
 | --- | --- |
 | Hoje | Escolher tempo disponível, receber uma sugestão de tarefa que caiba nesse tempo e acessar a sessão a retomar. |
 | Plano | Criar, editar e excluir objetivos/tarefas; definir duração, prioridade e link opcional; consultar datas e passos das tarefas importadas. |
-| Sessão | Iniciar, pausar, retomar e concluir; acompanhar tempo e salvar a nota do próximo passo; consultar o guia da tarefa. |
-| Progresso | Exibir sessões concluídas, tempo efetivamente registrado e notas. |
+| Sessão | Iniciar, pausar, retomar, encerrar por agora ou concluir tarefa; guardar e recuperar o próximo passo; consultar o guia da tarefa. |
+| Progresso | Exibir sessões encerradas e tempo registrado; distinguir se a tarefa foi concluída no encerramento de cada sessão. |
 | Planejar com IA | Receber o pedido por texto, gerar e salvar uma proposta, permitir revisão/descarte e importar após confirmação. O serviço real ainda depende da ativação descrita adiante. |
 
 Há no máximo uma sessão em andamento ou pausada. Fechar o app com uma sessão
 rodando mantém a contagem baseada no horário persistido; é preciso pausar para
 parar o tempo. Uma sessão pausada conserva seu tempo ao reabrir. Concluir finaliza
-a tarefa e a sessão na mesma transação.
+a tarefa e a sessão na mesma transação. **Encerrar por agora** libera a sessão e
+mantém a tarefa pendente. Ao iniciá-la novamente, uma sessão nova recupera a nota
+exata da última encerrada, com tempo zerado e sem alterar os registros anteriores.
 
 Exclusões exigem confirmação. Uma tarefa ou objetivo associado à sessão ainda
-aberta não pode ser excluído. O histórico de sessões concluídas é preservado.
+aberta não pode ser excluído. O histórico de sessões encerradas é preservado.
 
 ## 5. Planejamento com IA
 
 ### Experiência preparada
 
-1. Abrir **Planejar com IA** e escrever o que deseja estudar.
+1. Abrir **Planejar com IA**. Sem configuração, o aviso aparece antes do formulário
+   e oferece voltar ao plano manual. Com o serviço habilitado, escrever o tema.
 2. Definir nível, minutos por dia (15–90), dias da semana, duração (1–4 semanas)
    e data inicial.
 3. Solicitar uma proposta com objetivo, temas e uma atividade por dia selecionado.
@@ -123,7 +126,8 @@ quando for ativar; não pressupor gratuidade ilimitada ou permanente.
 - O fluxo, o adaptador e os arquivos de configuração estão preparados.
 - A ativação do Firebase não foi realizada neste trabalho.
 - Nenhuma resposta real do Gemini nem sua qualidade pedagógica foi validada.
-- O APK entregue informa indisponibilidade ao tentar gerar sem configuração.
+- O APK informa indisponibilidade antes do formulário quando não há configuração;
+  rascunhos já salvos continuam disponíveis para revisão e confirmação offline.
 - Respostas simuladas existem apenas em testes; não substituem a IA no app normal.
 
 O app não autentica o estudante. A conta Google/Firebase necessária para ativar
@@ -155,7 +159,7 @@ Se o projeto for movido, localizar o checkout atual antes de executar comandos.
 | --- | --- |
 | Plataforma | Flutter 3.50.0 / Dart 3.14.0; Android primeiro. |
 | Interface e estado | Material UI e Riverpod. |
-| Persistência | SQLite com `sqflite`, schema v2. `sqflite_common_ffi` nos testes locais. |
+| Persistência | SQLite com `sqflite`, schema v3. `sqflite_common_ffi` nos testes locais. |
 | IA | `firebase_core`, `firebase_ai` e `firebase_app_check`; inicialização apenas ao gerar. |
 | Android | Pacote `dev.tyago.nextstep`; build verificado com mínimo API 24 e alvo API 36. |
 | Testes Android | Pacote separado `dev.tyago.nextstep.integration`. |
@@ -163,7 +167,8 @@ Se o projeto for movido, localizar o checkout atual antes de executar comandos.
 
 Foi escolhido `sqflite` em vez do Drift sugerido inicialmente para reduzir a
 complexidade do MVP. A migração v1 → v2 preserva dados antigos e acrescenta
-detalhes das tarefas, rascunho e registro de importações.
+detalhes das tarefas, rascunho e registro de importações. A migração v2 → v3
+acrescenta encerramento sem conclusão e preserva sessões, IDs e autoincremento.
 
 O código está separado em `lib/ui`, `lib/application`, `lib/domain` e `lib/data`.
 O repositório GitHub é **privado**, em [Tyago03/NextStep](https://github.com/Tyago03/NextStep),
@@ -174,25 +179,48 @@ abaixo. Os commits recentes de implementação são:
 
 - `142d78a`: persistência dos planos e migração segura.
 - `bd8d403`: integração Gemini preparada, revisão e confirmação das propostas.
+- `cfb4d97`: correção do espaço do emulador no CI, com ambos os jobs aprovados.
+- `7592ce3`: encerramento separado, contexto entre sessões, aviso inicial de IA
+  indisponível e preparação de assinatura release própria.
+- `cd62f28`: preparação dos testes para conteúdo fora da tela e fluxo completo
+  adicional em 320×480, preservando todas as asserções de estado e persistência.
 
-## 7. Validação registrada em 19/11/2026
+## 7. Validação registrada em 21/11/2026
 
 - Formatação sem alterações pendentes e análise estática sem problemas.
-- **71 testes locais aprovados**, incluindo regras, SQLite, controladores e telas.
+- **92 testes locais aprovados**, incluindo regras, SQLite, controladores, telas
+  e o fluxo completo em área de 320×480.
 - **Quatro etapas Android aprovadas**: proposta com resposta controlada, fluxo
-  original de sessão e duas fases de recuperação após encerrar o processo.
-- Seis imagens da interface de IA geradas por widgets e revisadas visualmente.
-- APK **0.2.0+2** compilado, instalado e aberto no emulador; versão, atividade
-  em primeiro plano e presença do banco local confirmadas.
+  de sessão ampliado para alternar A/B/A e duas fases de recuperação de processo.
+- CI do ambiente corrigido: ambos os jobs e quatro etapas Android passaram no
+  mesmo commit `cfb4d97`, execução `44851876321`.
+- **CI final da versão 0.3.0 aprovado no mesmo commit `cd62f28`**: 92 testes gerais
+  e as quatro etapas Android. [Execução 44862109558](https://github.com/Tyago03/NextStep/actions/runs/44862109558),
+  concluída em 21/11/2026 às 00:55:31 de Goiânia. O commit documental posterior
+  não altera o código do aplicativo nem os testes.
+- Evidências adicionais da versão 0.3.0, artefatos e demonstração são registradas
+  em `docs/REVISION_2026_11_20.md`. Checkpoints anteriores continuam nos documentos
+  de validação de 19/11.
 
 Esses resultados não equivalem a testes com usuários, avaliação do Gemini real
-ou validação em aparelho físico. A inspeção manual do emulador pelo Computer Use
-ficou bloqueada por permissão nas tentativas anteriores. Não declarar que essa
-inspeção ocorreu; consultar novamente as permissões se ela for necessária.
+ou validação em aparelho físico. O acesso pelo Computer Use, bloqueado na rodada
+anterior, foi liberado nesta rodada. Consultar o novo checkpoint para distinguir
+o que foi demonstrado manualmente dos testes automatizados. A instalação release
+foi usada para criar duas tarefas, pausar/reabrir/retomar, alternar entre tarefas,
+recuperar a última nota e concluir explicitamente uma tarefa. O histórico mostrou
+três sessões encerradas e uma tarefa concluída. A indisponibilidade da IA foi
+conferida antes do formulário.
 
-O APK está em `dist/NextStep-debug.apk`, e seu SHA-256 está no arquivo vizinho
-`dist/NextStep-debug.apk.sha256`. Trata-se de build debug, sem configuração
-Firebase. O registro detalhado do artefato está em `docs/AI_VALIDATION.md`.
+APKs e hashes ficam em `dist/`, ignorado pelo Git. A assinatura release própria é
+guardada em `.nextstep-tools/signing/nextstep-release.jks` (pasta irmã), junto da
+configuração privada `android/key.properties`. Preservar ambos para futuras
+atualizações. A assinatura difere da instalação debug; testar o release em outro
+emulador sem apagar dados da instalação anterior.
+
+Artefato release: `dist/NextStep-0.3.0-release.apk`, **55.127.375 bytes**,
+SHA-256 `fb96a8c3cd1e56b6a9ca53fae3022c361f7c41206d017f5491582870ee3a9350`.
+Vídeo: `dist/demo/NextStep-0.3.0-demo.mp4`; capturas reais em `docs/images/`.
+São materiais preparados localmente, sem link público ou publicação em loja.
 
 ## 8. Executar e verificar
 
@@ -218,6 +246,10 @@ Os testes Android precisam do emulador/dispositivo disponível. O script mantém
 os testes em seu pacote separado e preserva os dados entre as fases de reinício.
 Gerar o APK normal depois evita entregar o artefato de integração.
 
+Para preparar um release assinado localmente, usar `tool/prepare-signing.ps1`
+e `tool/build-distribution.ps1`. Esses comandos não publicam o arquivo. Seguir
+`docs/PORTFOLIO.md` para apresentação e aprovação de compartilhamento externo.
+
 Para a futura ativação do Firebase, seguir `docs/AI_SETUP.md`. O conversor
 `tool/configure-firebase.ps1` prepara `config/firebase.local.json`, ignorado pelo
 Git. O build precisa ser refeito após a configuração. Não colocar uma chave
@@ -233,6 +265,9 @@ Quando Tyago decidir ativar a conta:
 3. Verificar cotas, falha de internet e recuperação com o serviço habilitado.
 4. Confirmar que nenhuma tarefa aparece antes da aprovação; importar, reabrir
    o app e executar uma tarefa até a conclusão.
+
+Próxima entrega proposta: exportação e restauração local, com formato versionado,
+validação, confirmação e rollback. Não foi implementada nesta revisão.
 
 Continuam futuros, sem autorização implícita para implementação: login,
 sincronização, voz, notificações, exportação/importação, widget Android e
@@ -251,5 +286,6 @@ ou tokens no chat nem contornar os bloqueios.
 
 Referências locais: `README.md` (em inglês), `docs/ARCHITECTURE.md`,
 `docs/AI_SETUP.md`, `docs/AI_VALIDATION.md`, `docs/VALIDATION.md` e
-`docs/QA_ROUND_2.md`. Consultar o código e as ferramentas novamente antes de
+`docs/QA_ROUND_2.md`, `docs/REVISION_2026_11_20.md` e `docs/PORTFOLIO.md`.
+Consultar o código e as ferramentas novamente antes de
 afirmar que o estado descrito neste briefing continua atual.
