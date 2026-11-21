@@ -1,13 +1,16 @@
 # Segunda rodada de qualidade — 19/11/2026
 
+Registro histórico do MVP. Resultados posteriores, incluindo CI e demonstração
+da versão 0.3.0, estão em [REVISION_2026_11_20.md](REVISION_2026_11_20.md).
+
 ## Resultado verificado
 
-| Foco solicitado | Trabalho realizado | Evidência e limite |
+| Foco | Alteração | Evidência e limite |
 | --- | --- | --- |
-| Funcionalidade | Correção de duplicação após gravar com sucesso e falhar ao atualizar a tela. Recuperação preserva notas e bloqueia novas alterações até recarregar. | 35 testes locais passaram: 14 de banco, 5 de controller e 16 de interface. Fluxo Android e duas fases de reinício passaram novamente. |
+| Funcionalidade | Recuperação após gravação confirmada e falha de atualização, sem duplicação; notas preservadas e novas alterações bloqueadas até recarregar. | Testes de banco, controller, interface e reinício Android; resultados abaixo. |
 | Usabilidade | Tempos rápidos 5/15/25/45; controles de tempo só quando úteis; pausa, retomada e conclusão junto ao cronômetro; salvamento automático com repetição após falha. | Testes de edição, exclusão, preferências, recuperação e fluxo completo; telas/formulários em 320 px, fonte 200% e teclado simulado. |
 | Clareza | Ordem automática ao criar; ordem/link em Mais opções; atalho para outra tarefa; orientação correta quando já existe objetivo sem tarefas. | Fluxos e textos conferidos por código, testes e imagens dos widgets. Ainda não houve teste de compreensão com uma pessoa. |
-| Estética | Títulos curtos, verde suave, contraste entre ação principal e secundária, cartões com espaçamento consistente e tempos rápidos alinhados. | Sete imagens finais dos widgets foram inspecionadas. São renders de desenvolvimento, não capturas do emulador. |
+| Estética | Títulos curtos, verde suave, hierarquia das ações, espaçamento consistente e tempos rápidos alinhados. | Sete renders de widgets inspecionados; não são capturas do emulador. |
 
 ## Problemas encontrados e resolvidos
 
@@ -30,7 +33,8 @@
 
 - Formatação: 15 arquivos, nenhuma alteração pendente.
 - `flutter analyze`: sem problemas encontrados.
-- `flutter test --reporter expanded`: 35/35 aprovados.
+- `flutter test --reporter expanded`: **35/35** aprovados — 14 de banco,
+  5 de controller e 16 de interface.
 - Após limpar um aviso antigo de atualização recuperada nos diálogos,
   os 16 testes de interface foram executados novamente e passaram.
 - Cenário de renderização: 1/1 aprovado, sete PNGs gerados e inspecionados.
@@ -62,16 +66,12 @@ São widgets reais do app a 390 × 844 pixels lógicos, com fontes Roboto e Mate
 Icons. Os dados e tempos são fixtures de teste em SQLite na memória; não foram
 inseridos no banco do aplicativo normal. O script não captura a área de trabalho.
 
-## Limites e próximo teste humano
+## Limites desta rodada
 
-O Computer Use continuou retornando
-`Computer Use was not approved to use qemu-system-x86_64`, inclusive após nova
-tentativa de liberação. Não foi feita inspeção manual no emulador, teste de
-teclado Android por Computer Use ou avaliação por leitor de tela. Os testes
-automatizados no Android e os renders de widgets foram executados separadamente.
+O acesso à janela do emulador estava bloqueado por permissão. Não houve inspeção
+interativa, avaliação do teclado nativo ou leitor de tela nesta rodada; os
+testes Android e os renders foram executados separadamente.
 
-Ao experimentar, tente criar um objetivo/tarefa sem instruções externas, iniciar,
-escrever onde parou, pausar, reabrir, retomar e concluir. Observe em quais pontos
-precisa procurar uma ação ou reler um texto. Esse feedback ainda é necessário
-para avaliar a intuição no uso real. Desempenho em aparelho físico e build de
-produção não foram medidos nesta rodada.
+Não foram avaliados compreensão por usuários, desempenho em aparelho físico ou
+build de produção. Um teste de usabilidade deve observar a descoberta das ações
+de criar, iniciar, pausar, retomar e concluir sem instruções externas.

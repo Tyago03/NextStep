@@ -1,13 +1,13 @@
 # Validação da integração de IA — v0.2.0
 
 Executada localmente em **19/11/2026**, no Windows, com Flutter 3.50.0 / Dart
-3.14.0 e emulador Android API 36. Este registro complementa os checkpoints
-anteriores em [VALIDATION.md](VALIDATION.md) e [QA_ROUND_2.md](QA_ROUND_2.md).
+3.14.0 e emulador Android API 36. Registro histórico da **v0.2.0**, posterior ao
+[MVP](VALIDATION.md) e à [segunda rodada de QA](QA_ROUND_2.md). Resultados da
+v0.3.0 estão em [REVISION_2026_11_20.md](REVISION_2026_11_20.md).
 
-**A integração foi preparada, mas o Firebase não foi ativado por decisão do
-usuário. Não houve chamada real ao Gemini.** Os testes de propostas usam respostas
-controladas e explicitamente identificadas como fixtures. Eles verificam o fluxo
-e o contrato de dados, não a qualidade pedagógica de um modelo real.
+**Firebase não foi ativado e não houve chamada real ao Gemini.** As propostas
+usam fixtures explícitas: os testes validam fluxo e contrato de dados, sem medir
+a qualidade pedagógica das respostas de um modelo real.
 
 ## Resultados executados
 
@@ -21,7 +21,7 @@ e o contrato de dados, não a qualidade pedagógica de um modelo real.
 | `tool/build-android.ps1` | APK debug normal compilado, copiado para `dist` e hash calculado. |
 | Instalação e inicialização do APK normal | `adb install -r` retornou `Success`; `am start -W` retornou `Status: ok`; processo e atividade em primeiro plano confirmados. |
 | Pacote e armazenamento instalados | `dev.tyago.nextstep`, versão `0.2.0`, código `2`; `nextstep.db` presente no sandbox normal. |
-| Scripts de configuração/build/execução/verificação | Sintaxe PowerShell validada. Build sem configuração e verificação Android executados; conversão de credenciais reais e execução configurada permanecem pendentes. |
+| Scripts de configuração/build/execução/verificação | Sintaxe PowerShell validada. Build sem configuração e verificação Android executados; conversão da configuração de um projeto Firebase real e execução configurada ficaram pendentes. |
 
 Os testes Android usaram exclusivamente o pacote isolado
 `dev.tyago.nextstep.integration`, com `--no-uninstall` entre as fases. Após os
@@ -53,10 +53,9 @@ novo. Cancela a primeira confirmação, aprova a seguinte, verifica os passos
 persistidos e executa início → pausa → retomada → conclusão de uma tarefa,
 conferindo o histórico. As etapas anteriores de sessão e reinício também passaram.
 
-Uma execução intermediária expôs um toque de teste durante a transição de rota.
-O helper passou a esperar o botão habilitado, atingível e com posição estável
-antes de tocar uma única vez. A rodada completa de quatro etapas passou após
-essa correção; avisos de toque não foram ignorados.
+Uma execução intermediária expôs um toque durante a transição de rota. O teste
+passou a aguardar um botão habilitado, atingível e estável antes de um único
+toque. As quatro etapas passaram após a correção, sem ignorar avisos de toque.
 
 ## Revisão de interface
 
@@ -66,10 +65,9 @@ hierarquia das informações, legibilidade, consistência visual com o restante 
 app e ausência de cortes visíveis nessas imagens. Os fixtures estão identificados
 como conteúdo de teste.
 
-São renders de widgets Flutter, não capturas do emulador ou testes com usuários.
-A inspeção manual pelo Computer Use não foi realizada nesta rodada; o acesso ao
-emulador permaneceu bloqueado nas tentativas anteriores. Não foi feita avaliação
-em aparelho físico, teclado nativo, TalkBack ou medição de desempenho.
+São renders de widgets Flutter. A inspeção interativa do emulador não foi
+realizada nesta rodada devido ao bloqueio de acesso. Não houve teste com
+usuários, aparelho físico, teclado nativo, TalkBack ou medição de desempenho.
 
 ## Artefato entregue
 
@@ -81,9 +79,10 @@ em aparelho físico, teclado nativo, TalkBack ou medição de desempenho.
   Firebase. Planejamento manual e sessões funcionam; gerar com IA informa a
   indisponibilidade até a configuração e nova compilação.
 
-Logs e imagens estão em `local-validation/`, ignorado pelo Git. O APK e o arquivo
-de hash estão em `dist/`, também ignorado. O workflow GitHub Actions foi atualizado,
-mas não foi executado remotamente. Não houve publicação em loja.
+Logs e imagens foram gerados em `local-validation/`; APK e hash, em `dist/`.
+Ambos os diretórios são ignorados pelo Git. Neste checkpoint o workflow GitHub
+Actions estava configurado, mas ainda não havia execução remota. Não houve
+publicação em loja.
 
 ## Depois da ativação
 

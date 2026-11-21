@@ -1,12 +1,9 @@
-# Validation record
+# MVP validation — 19 November 2026
 
-This records the original MVP checkpoint. The later AI integration, current
-test counts, and v0.2.0 APK are recorded in [AI_VALIDATION.md](AI_VALIDATION.md).
-
-Recorded on **19 November 2026**. Results below describe commands actually run
-locally, separately from checks that are implemented or configured but pending.
-No screenshot, successful compile, or Windows-hosted test is used as a substitute
-for Android execution.
+Historical checkpoint of the original MVP, recorded on **19 November 2026**.
+These results apply to that version. Later records cover
+[AI integration v0.2.0](AI_VALIDATION.md) and
+[v0.3.0, remote CI and the release demonstration](REVISION_2026_11_20.md).
 
 ## Environment inspected
 
@@ -24,8 +21,7 @@ for Android execution.
 | Virtual-device configuration | `NextStep_API36`, `pixel_6`, Google APIs x86_64 API 36 |
 
 Tools and caches are isolated under `../.nextstep-tools`; `tool/env.ps1` configures
-only its PowerShell process and descendants. Tool presence and version checks do
-not, by themselves, prove that an APK was built or that the app ran on Android.
+only its PowerShell process and descendants.
 
 ## Executed local checks
 
@@ -37,42 +33,26 @@ Run from the repository root after `. .\tool\env.ps1`:
 | `flutter analyze` | Passed; no issues found | Static analysis of the project and tests. |
 | `flutter test --reporter expanded` | Passed; 35/35 tests | 14 repository tests, 5 controller tests, and 16 widget tests on Windows. |
 
-The final combined check above includes the second QA round and committed-write
-refresh recovery. Repository tests use actual SQLite files and close/reopen their connections.
-They do not replace the Android plugin, packaging, process-restart, or device
-checks below.
+This suite includes the [second QA round](QA_ROUND_2.md) and committed-write
+refresh recovery. Repository tests close and reopen real SQLite files. Android
+plugin and process-restart checks are recorded separately below.
 
 ### What the 35 host tests cover
 
-- Goal/task creation, editing, ordering, validation, preferences, and suggestions
-  that respect available time and completion state.
-- Running and paused session persistence after closing and reopening a SQLite
-  file, deterministic elapsed time, repeated state commands, competing starts,
-  and atomic task/session completion.
-- Active-work deletion protection and retained session snapshots after plan
-  edits or deletion.
-- Ordered rapid note edits followed immediately by pause, duplicate command
-  locking, queued writes after controller disposal, and failed drafts retained
-  through another successful action and an explicit retry.
-- The complete UI journey from creating a goal/task to starting, noting,
-  pausing, reopening the database, resuming, completing, and viewing history.
-- Portuguese/English empty and populated screens at 320 pixels with 2x text
-  scaling, including long titles, notes, and history.
-- Invalid form submissions, an actual closed-database save failure, and a failed
-  note remaining visible after tab navigation.
-- Editing suggestions, cancellation/confirmation of deletes, historical records
-  after sibling deletion, and SQLite-trigger failure during completion proving
-  rollback before a safe retry.
-- A committed write followed by a failed refresh, blocked duplicate creation,
-  read-only retry, and note draft recovery after the same failure.
-- Immediate duration presets, alternative task selection, automatic append
-  order, accurate onboarding, and forms at 320px with 2x text plus keyboard insets.
+- Goal/task CRUD, validation, ordering, preferences and time-compatible
+  suggestions; deletion confirmation and protection of active work.
+- Running/paused persistence, deterministic timing, repeated commands,
+  competing starts, retained history and atomic completion with rollback.
+- Ordered note writes, immediate pause, duplicate-command prevention, queued
+  writes after controller disposal, failed drafts and retry across navigation.
+- Committed writes followed by failed refreshes: no duplicate insert, blocked
+  mutations, read-only recovery and retained note drafts.
+- Full planning/session journey, time presets, alternate-task selection and
+  onboarding; PT/EN layouts at 320px, 2x text and simulated keyboard insets.
 
-The seven-screen development render scenario also passed, separately from the
-35-test suite. All seven final PNGs were inspected. They render production
-widgets using SDK Roboto and Material icon fonts at 390 x 844 logical pixels;
-they do not capture the desktop or emulate Android system chrome/keyboard.
-See [QA_ROUND_2.md](QA_ROUND_2.md) for reproduction and the visual findings.
+A separate render scenario passed; seven PNGs were inspected at 390 × 844 logical
+pixels with Roboto and Material icons. These are widget renders, not Android
+screenshots. Reproduction and findings are in [QA_ROUND_2.md](QA_ROUND_2.md).
 
 ## Android results and remaining checks
 
@@ -80,16 +60,13 @@ See [QA_ROUND_2.md](QA_ROUND_2.md) for reproduction and the visual findings.
 | --- | --- |
 | `flutter build apk --debug` | Passed; normal app copied to `dist/NextStep-debug.apk` before integration builds. |
 | Normal Android application install and launch | Passed: `adb install -r` returned Success; `am start -W` returned Status ok; process and top resumed activity confirmed; `nextstep.db` exists. |
-| Interactive desktop visual inspection | Blocked: Computer Use has not granted access to the emulator window. |
+| Interactive visual inspection | Not performed at this checkpoint: permission to access the emulator window was denied. |
 | Development widget render review | Seven final images inspected after typography, hierarchy, spacing, and palette refinements; not a manual device test. |
 | `integration_test/session_flow_test.dart` on Android | Passed, 1/1, in the isolated integration package. |
 | `integration_test/process_restart_test.dart` across two Android processes | Both seed and verify passed, 1/1 each, with an explicit force-stop between executions and retained SQLite data. |
 | Physical Android device / profile-mode performance | Not performed. |
 
-This file should be updated only after each command finishes and its output is
-checked. A debug APK is a development build, not a store-signed release.
-
-The final normal APK was rebuilt with `-t lib/main.dart`, checked to have the
+The normal APK was rebuilt with `-t lib/main.dart`, checked to have the
 application ID `dev.tyago.nextstep`, installed, and left running on the emulator.
 The temporary `dev.tyago.nextstep.integration` package was removed after all
 integration stages passed. The delivered file is `dist/NextStep-debug.apk`
@@ -105,9 +82,9 @@ virtualization settings.
 
 ### Setup failures and resolutions
 
-- The first sandboxed SDK request failed DNS resolution. Approved network-enabled
-  execution was required for dependency downloads and Flutter's localhost test
-  runner; Windows security settings were not disabled.
+- The initial SDK request failed DNS resolution. Dependency downloads and
+  Flutter's localhost test runner required network access; Windows security
+  settings were not disabled.
 - The Flutter release-index URL returned `NoSuchKey`. The official Flutter Git
   repository supplied the verified 3.50.0 release instead.
 - Flutter's first checkout exceeded Windows Git path limits. Enabling
@@ -115,9 +92,8 @@ virtualization settings.
   checkout resolved it; no existing repository was reconfigured.
 - `avdmanager` emitted a `devices.xml` warning but created the dedicated device.
   Successful emulator boot was separately verified using `sys.boot_completed=1`.
-- Computer Use refused access to `qemu-system-x86_64`. The user's request to
-  enable it has been recorded, but no visual desktop inspection is claimed until
-  that permission succeeds.
+- Permission to access the emulator window was denied; interactive visual
+  inspection was not performed at this checkpoint.
 - The first process-restart verification could not find its seed database.
   Flutter's default test deployment uninstalled the seed app before installing
   the verification target. The revised procedure requests a separate
@@ -173,25 +149,20 @@ usage metric. Successful verification removes only that named test database.
 Failure retains it for inspection. The integration application's separate sandbox
 and the normal application's distinct ID were verified from the APK and device.
 
-Also check the ordinary application manually: create a goal and task, start,
-enter a next step, wait for the saved indicator, pause, close the app, reopen,
-resume, complete, and inspect Progress. Check a running restart separately to
-confirm the documented continued-counting policy.
-
 ## CI and repository state
 
 `.github/workflows/flutter.yml` configures formatting, analysis, host tests, a
-debug APK build, and an Android emulator integration job. **GitHub Actions has
-not executed for this project.** A workflow file is configuration, not a passing
-CI result.
+debug APK build and Android integration. **GitHub Actions had not run at this
+checkpoint**; versioning was local Git. Later remote results and release signing
+are recorded in [REVISION_2026_11_20.md](REVISION_2026_11_20.md).
 
-Versioning is local Git at this checkpoint. No remote push, public repository,
-store listing, production rollout, or external human review is claimed.
+No remote push, store listing, production rollout or external human review was
+part of this checkpoint.
 
 ## Other platforms and limitations
 
-No web build, iOS run, or Windows desktop application has been validated. The
+No web build, iOS run or Windows desktop application was validated. The
 host is Windows, but `flutter test` runs the test harness rather than a packaged
-Windows app. No release signing, physical-device performance measurements,
+Windows app. Release signing, physical-device performance measurements,
 battery/background-service tests, export/import, or backup/restore validation
-has been performed.
+were not performed at this checkpoint.

@@ -1,139 +1,78 @@
-# Planejamento com IA — ativação e funcionamento
+# Optional Firebase/Gemini integration
 
-## Estado desta versão
+## Current availability
 
-O fluxo e o adaptador Firebase estão implementados. **A conta ainda não foi
-ativada, por decisão do usuário; nenhuma chamada real ao Gemini foi validada.**
-O APK sem configuração informa que a IA está indisponível **antes de mostrar o
-formulário** e oferece a volta ao plano manual. O planejamento manual e as
-sessões continuam funcionando. Não existe resposta simulada no aplicativo
-normal. Geradores sintéticos existem somente nos testes e renders de revisão.
+**Live AI is not activated or validated.** The release APK supports manual
+planning and local sessions without Firebase configuration, credentials or
+network access. Its AI entry shows an unavailable notice before collecting a
+request. No fixture response is used in the normal app.
 
-Escolha: **Gemini 3.5 Flash-Lite**, pela **Gemini Developer API via Firebase AI
-Logic**, usando projeto **Spark**, sem conta de faturamento vinculada. Em
-19/11/2026, as páginas oficiais listavam entrada/saída gratuitas para esse modelo,
-com limites de uso. Gratuidade não significa capacidade ilimitada nem garantia
-de disponibilidade futura. Não há troca automática para modelos pagos.
+The prepared adapter selects `gemini-3.5-flash-lite` through the Gemini Developer
+API via Firebase AI Logic. Model availability, quotas, pricing and eligibility
+must be checked before activation; this project does not promise permanent or
+unlimited free use. [Firebase pricing](https://firebase.google.com/docs/ai-logic/pricing)
+describes the distinction between the SDK and provider usage costs.
 
-- [Plano gratuito do Firebase AI Logic](https://firebase.google.com/docs/ai-logic/pricing)
-- [Preço do modelo](https://aistudio.google.com/docs/pricing#gemini-3.5-flash-lite)
-- [Configuração oficial Flutter](https://firebase.google.com/docs/ai-logic/get-started?platform=flutter)
+## Data and confirmation
 
-## Experiência no aplicativo
+When enabled, generation sends the entered topic and study preferences to Google,
+plus connection/App Check data. It does not attach existing tasks, notes or
+session history. Generated proposals are stored locally as drafts; only explicit
+confirmation imports goals/tasks, in a transaction protected against duplication.
+Existing drafts remain reviewable and importable offline.
 
-1. Abra **Planejar com IA** em Hoje (plano vazio) ou Plano.
-2. Se a geração estiver configurada, descreva por texto o que quer aprender.
-   Personalize nível, 15–90 minutos por dia, dias da semana, duração de 1–4 semanas
-   e data inicial. Sem configuração, o app mostra o aviso e a opção **Voltar ao
-   plano manual**, sem pedir que preencha esses campos.
-3. Gere a proposta. O app informa que tema e preferências serão enviados ao
-   Google; não envia as tarefas existentes, notas ou histórico.
-4. Revise temas, datas, atividades, 3–6 passos por tarefa e como verificar a
-   conclusão. O rascunho é salvo em SQLite, separado do plano ativo.
-5. **Adicionar ao meu plano → Confirmar e adicionar** cria o objetivo e todas as
-   tarefas em uma transação. Cancelar ou descartar não cria tarefas.
-6. Os passos ficam disponíveis offline no Plano e durante a Sessão.
+Under applicable unpaid-service terms, Google may use submitted content and
+responses to improve its services. Avoid sensitive information; review the
+[Gemini API terms](https://aistudio.google.com/docs/terms) before activation.
+Local plan storage does not mean local inference.
 
-A verificação inicial é local: não inicia Firebase nem faz uma chamada ao
-Gemini. Ter configuração não garante internet, cota ou autorização do serviço;
-essas falhas continuam sendo tratadas ao solicitar a geração. Se já houver uma
-proposta salva, ela continua disponível para revisão e confirmação local mesmo
-sem geração habilitada. O aviso de indisponibilidade não apaga o rascunho nem
-cria objetivos ou tarefas.
+No student login, anonymous authentication, cloud database or synchronization
+is implemented. Firebase Authentication is a transitive SDK dependency, not an
+app sign-in flow. Deleting app data can remove the local plan and drafts; backup
+and export are not available.
 
-O calendário é calculado no celular. A resposta da IA não escolhe IDs nem datas;
-precisa fornecer uma atividade por dia selecionado, dentro do tempo disponível.
-Propostas incompletas, grandes demais ou inválidas são rejeitadas integralmente.
-As datas orientam o planejamento; não bloqueiam começar uma tarefa antes do dia
-previsto e não criam alarmes ou eventos no calendário do sistema.
+## Configuration for a later activation
 
-## Sem login e armazenamento no celular
+These external steps are **pending** and are not part of the current release:
 
-Não há tela de login, cadastro ou autenticação anônima. Firebase Authentication
-aparece como dependência transitiva do SDK de IA, mas o NextStep não inicia uma
-sessão de usuário. Não foram adicionados Firestore, Realtime Database, Storage,
-Analytics ou sincronização de planos.
-
-SQLite v3 mantém objetivos, tarefas detalhadas, notas, progresso e rascunho no
-dispositivo. As migrações de v1/v2 preservam os dados existentes. Encerrar uma
-sessão salva seu tempo e nota mantendo a tarefa pendente; concluir a tarefa é
-uma ação separada. Desinstalar ou limpar os dados remove esse armazenamento;
-esta versão não inclui backup/exportação.
-
-**A geração exige internet.** O Google recebe o pedido e dados técnicos necessários
-à conexão/App Check. No nível gratuito, prompts e respostas podem ser utilizados
-para melhorar os serviços do Google. A interface informa isso antes de gerar.
-Armazenamento local do plano não significa inferência de IA local.
-
-## Ativar depois, sem alterar outros projetos
-
-Estas etapas externas ainda não foram executadas:
-
-1. Entre no [console Firebase](https://console.firebase.google.com/) com sua conta
-   de desenvolvedor e crie um projeto exclusivo do NextStep. Mantenha **Spark**,
-   sem vincular faturamento, para usar a camada gratuita.
-2. Registre um aplicativo **Android** com pacote **`dev.tyago.nextstep`**.
-3. Na área **Firebase AI Logic**, conclua o assistente usando **Gemini Developer
-   API**. Não selecione a opção Agent Platform/Vertex AI para este setup gratuito.
-4. Baixe o `google-services.json` do aplicativo Android e, na pasta NextStep,
-   execute o comando abaixo com o caminho real do arquivo:
+1. Create a dedicated Firebase project, review provider terms/quotas and retain
+   the intended no-billing setup if eligible. Do not enable paid services implicitly.
+2. Register Android package `dev.tyago.nextstep` and configure Firebase AI Logic
+   with the Gemini Developer API.
+3. Register App Check and the appropriate signing identity. Keep enforcement
+   enabled. Debug builds use the debug provider; release builds use Play Integrity.
+   Release/sideload attestation must be validated before offering live AI.
+4. Download the Android configuration and convert it locally:
 
 ```powershell
-.\tool\configure-firebase.ps1 -GoogleServicesJson 'C:\caminho\google-services.json'
-.\tool\run-android.ps1
+.\tool\configure-firebase.ps1 -GoogleServicesJson 'path/to/google-services.json'
 ```
 
-O script apenas converte a configuração Android para `config/firebase.local.json`
-(ignorado pelo Git). Ele valida o pacote, não sobrescreve configuração existente
-e não modifica o projeto remoto. Alternativa: preencha uma cópia de
-`config/firebase.example.json` salva como `config/firebase.local.json`.
+The script validates the package and writes ignored `config/firebase.local.json`
+without changing the remote project or replacing existing configuration.
+`config/firebase.example.json` documents the expected fields. Never embed a
+Gemini secret, service-account key or App Check debug token in the app or Git.
 
-Essa configuração é a identificação pública do app Firebase. **Não coloque uma
-chave secreta da Gemini Developer API ou credenciais de serviço no aplicativo.**
-Firebase AI Logic mantém a credencial do provedor fora do código cliente.
+Build or run with standard commands after configuration:
 
-### App Check no emulador
-
-App Check é inicializado na primeira solicitação à IA. A compilação debug usa o
-provedor de depuração; registre o token específico desse dispositivo no console
-Firebase, em App Check → Apps → gerenciar tokens de depuração. O token aparece no
-log local do Android após a primeira tentativa de gerar. Não o publique nem o
-inclua no Git. Mantenha a proteção do serviço habilitada.
-
-No terminal já configurado com `. .\tool\env.ps1`, o log pertinente pode ser
-consultado localmente com:
-
-```powershell
-adb -s emulator-5554 logcat -d -s DebugAppCheckProvider
+```sh
+flutter run --dart-define-from-file=config/firebase.local.json
+flutter build apk --release --dart-define-from-file=config/firebase.local.json
 ```
 
-Depois de registrar o token, tente gerar novamente e confira uma proposta real.
-Para um aparelho físico de desenvolvimento, registre o token daquele aparelho.
-Uma futura distribuição de produção usará Play Integrity, já selecionado no
-código para builds não debug, e exigirá cadastro/assinatura/configuração
-apropriados. A distribuição em produção não foi preparada ou validada aqui.
+A release build also requires the existing private signing configuration;
+see [distribution](DISTRIBUTION.md). Without the define file, AI stays unavailable.
+Firebase/App Check initializes only when generation is requested. Configuration
+alone does not prove network access, quota, attestation or provider availability.
 
-[Orientações oficiais de App Check](https://firebase.google.com/docs/ai-logic/app-check)
+## Required checks before enabling generation
 
-### Gerar o APK configurado
+Use synthetic topics to check real Portuguese/English responses, progression,
+completion checks, time limits, quota and network failures, recovery, and explicit
+confirmation before imports. Fixture tests validate local behavior, not provider
+quality. Keep the privacy notice accurate for the selected provider and plan.
 
-```powershell
-.\tool\build-android.ps1
-```
-
-Se `config/firebase.local.json` existir, os scripts de build e execução o passam
-ao Flutter via `--dart-define-from-file`. Também aceitam `-AiConfig CAMINHO`.
-Sem esse arquivo, o build funciona com o recurso de IA explicitamente
-indisponível. Configurar o Firebase exige reconstruir/reinstalar o APK.
-
-## Validação ainda necessária após ativar
-
-- Gerar propostas reais para assuntos diferentes e avaliar progressão,
-  profundidade e adequação dos passos ao tempo; testes sintéticos não medem isso.
-- Conferir cotas e autorização do projeto Spark/App Check.
-- Testar falha de internet e recuperação no dispositivo com serviço habilitado.
-- Confirmar, fechar e reabrir o aplicativo e executar uma tarefa importada.
-
-Os testes automatizados locais e no Android cobrem o fluxo, persistência,
-validação estrutural e confirmação usando respostas controladas. Resultados
-executados estão em [AI_VALIDATION.md](AI_VALIDATION.md).
+Official configuration references, checked 21 November 2026:
+[Flutter setup](https://firebase.google.com/docs/ai-logic/get-started?platform=flutter),
+[App Check](https://firebase.google.com/docs/ai-logic/app-check).
+Historical fixture results remain in [AI_VALIDATION.md](AI_VALIDATION.md).
