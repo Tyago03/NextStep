@@ -48,9 +48,48 @@ Future<void> tapKey(WidgetTester tester, String key) async {
     }
   }
   expect(target, findsOneWidget, reason: 'Missing control: $key');
-  await tester.ensureVisible(target);
-  await tester.pumpAndSettle(const Duration(milliseconds: 50));
-  await tester.tap(target);
+  // A route snapshot can still cover a laid-out control after pumpAndSettle.
+  // Require the real enabled target at a stable position in consecutive frames.
+  var ready = false;
+  var stableFrames = 0;
+  Offset? previousCenter;
+  final deadline = tester.binding.clock.fromNowBy(const Duration(seconds: 5));
+  while (tester.binding.clock.now().isBefore(deadline)) {
+    await tester.ensureVisible(target);
+    await tester.pump(const Duration(milliseconds: 100));
+    final hitTarget = target.hitTestable();
+    if (hitTarget.evaluate().length != 1) {
+      stableFrames = 0;
+      previousCenter = null;
+      continue;
+    }
+    final widget = tester.widget(hitTarget);
+    final enabled = widget is! ButtonStyleButton || widget.onPressed != null;
+    if (!enabled) {
+      stableFrames = 0;
+      previousCenter = null;
+      continue;
+    }
+    final center = tester.getCenter(hitTarget);
+    final previous = previousCenter;
+    stableFrames = previous != null && (center - previous).distance < 0.5
+        ? stableFrames + 1
+        : 1;
+    previousCenter = center;
+    if (stableFrames >= 2) {
+      ready = true;
+      break;
+    }
+  }
+  expect(
+    ready,
+    isTrue,
+    reason:
+        'Control $key did not become enabled and hit-testable within 5 seconds. '
+        'No tap was sent; check route transitions, overlays or keyboard insets.',
+  );
+  // Send exactly one tap; never retry a possibly mutating action.
+  await tester.tap(target.hitTestable());
   await settleApp(tester);
 }
 
