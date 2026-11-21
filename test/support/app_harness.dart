@@ -156,6 +156,17 @@ Future<void> exerciseSessionFlow(
   expect(completed.tasks.single.completed, isTrue);
 
   await tapKey(tester, 'nav_progress');
+  // The history can be below the summary on a small Android viewport.
+  final history = find.byKey(
+    ValueKey('history_session_${completed.sessions.single.id}'),
+  );
+  await tester.scrollUntilVisible(
+    history,
+    200,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await tester.pumpAndSettle();
+  expect(history, findsOneWidget);
   expect(find.text('Consultar um domínio'), findsOneWidget);
   expect(find.text(note), findsOneWidget);
   expect(find.text('00:02:00'), findsWidgets);

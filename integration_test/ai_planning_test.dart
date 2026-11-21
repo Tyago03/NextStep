@@ -131,6 +131,18 @@ void main() {
     expect(completed.sessions.single.note, 'Comparar a consulta com AAAA.');
     expect(completed.tasks.first.completed, isTrue);
     await tapKey(tester, 'nav_progress');
+    // A small Android viewport can leave the lazy history below the summary.
+    // Scroll to the actual persisted session before inspecting its contents.
+    final history = find.byKey(
+      ValueKey('history_session_${completed.sessions.single.id}'),
+    );
+    await tester.scrollUntilVisible(
+      history,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(history, findsOneWidget);
     expect(find.text(task.title), findsOneWidget);
     expect(generator.calls, 0);
     expect(tester.takeException(), isNull);

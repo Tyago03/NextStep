@@ -147,6 +147,17 @@ void main() {
     expect(completed.sessions.single.startedAt, start);
     expect(completed.sessions.single.completedAt, now);
     await tapKey(tester, 'nav_progress');
+    // Mount and reveal the lazy history below the summary on small devices.
+    final history = find.byKey(
+      ValueKey('history_session_${completed.sessions.single.id}'),
+    );
+    await tester.scrollUntilVisible(
+      history,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(history, findsOneWidget);
     expect(find.text(_taskTitle), findsOneWidget);
     expect(find.text(_note), findsOneWidget);
     expect(find.text('00:02:00'), findsWidgets);
